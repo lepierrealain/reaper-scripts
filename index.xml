@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain reaper scripts pack" commit="d352aff6be283e2f10a599cb085c5f516ae7bcb7">
+<index version="1" name="Pierre-Alain Scripts" commit="d352aff6be283e2f10a599cb085c5f516ae7bcb7">
   <category name="Editing">
     <reapack name="PA_Select item under mouse cursor.lua" type="script" desc="Select item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T09:58:01Z">
