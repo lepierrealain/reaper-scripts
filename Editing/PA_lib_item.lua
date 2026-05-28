@@ -2,70 +2,76 @@
 -- @author lepierrealain
 -- @version 1.0
 
--- Retourne une liste d'items partageant la même position que ref_item,
--- en tenant compte des item groups et des track groups (MEDIA_EDIT).
--- ref_item lui-même n'est pas inclus dans la liste retournée.
-function PA_GetGroupedItemsAtSamePosition(ref_item)
+-- Retourne une liste d'items liés à ref_item par même position+longueur, via :
+--   - item group (I_GROUPID)
+--   - track group (MEDIA_EDIT_LEAD/FOLLOW)
+--   - sélection
+-- ref_item lui-même n'est pas inclus. Pas de doublons.
+function PA_GetRelatedItemsAtSamePosition(ref_item)
   local ref_pos    = reaper.GetMediaItemInfo_Value(ref_item, "D_POSITION")
   local ref_len    = reaper.GetMediaItemInfo_Value(ref_item, "D_LENGTH")
   local item_group = math.floor(reaper.GetMediaItemInfo_Value(ref_item, "I_GROUPID"))
   local ref_track  = reaper.GetMediaItemTrack(ref_item)
 
-  -- Construit le set des track groups (MEDIA_EDIT) de la piste de ref_item
-  local ref_track_groups = {}
-  for g = 1, 32 do
-    local low  = reaper.GetSetTrackGroupMembership(ref_track, "MEDIA_EDIT_LEAD",   0, 0)
-    local low2 = reaper.GetSetTrackGroupMembership(ref_track, "MEDIA_EDIT_FOLLOW", 0, 0)
-    -- GetSetTrackGroupMembership retourne un bitmask 32 bits (groupes 1-32)
-    -- On reconstruit le set complet une seule fois
-    break
-  end
   local lead_mask   = reaper.GetSetTrackGroupMembership(ref_track, "MEDIA_EDIT_LEAD",   0, 0)
   local follow_mask = reaper.GetSetTrackGroupMembership(ref_track, "MEDIA_EDIT_FOLLOW", 0, 0)
   local ref_tg_mask = lead_mask | follow_mask
 
+  -- Index des items sélectionnés pour lookup O(1)
+  local selected = {}
+  for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
+    selected[reaper.GetSelectedMediaItem(0, i)] = true
+  end
+
+  local seen   = {}
   local result = {}
-  local num_tracks = reaper.CountTracks(0)
 
-  for t = 0, num_tracks - 1 do
+  local function add(candidate)
+    if not seen[candidate] then
+      seen[candidate] = true
+      table.insert(result, candidate)
+    end
+  end
+
+  for t = 0, reaper.CountTracks(0) - 1 do
     local track = reaper.GetTrack(0, t)
-    if track ~= ref_track then
-      local in_item_group   = false
-      local in_track_group  = false
 
-      -- Check track group : la piste candidate doit partager au moins un bit MEDIA_EDIT
-      if ref_tg_mask ~= 0 then
-        local tl = reaper.GetSetTrackGroupMembership(track, "MEDIA_EDIT_LEAD",   0, 0)
-        local tf = reaper.GetSetTrackGroupMembership(track, "MEDIA_EDIT_FOLLOW", 0, 0)
-        if (ref_tg_mask & (tl | tf)) ~= 0 then
-          in_track_group = true
-        end
-      end
+    local in_track_group = false
+    if ref_tg_mask ~= 0 and track ~= ref_track then
+      local tl = reaper.GetSetTrackGroupMembership(track, "MEDIA_EDIT_LEAD",   0, 0)
+      local tf = reaper.GetSetTrackGroupMembership(track, "MEDIA_EDIT_FOLLOW", 0, 0)
+      if (ref_tg_mask & (tl | tf)) ~= 0 then in_track_group = true end
+    end
 
-      local num_items = reaper.CountTrackMediaItems(track)
-      for i = 0, num_items - 1 do
-        local candidate = reaper.GetTrackMediaItem(track, i)
+    for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+      local candidate = reaper.GetTrackMediaItem(track, i)
+      if candidate ~= ref_item then
         local c_pos = reaper.GetMediaItemInfo_Value(candidate, "D_POSITION")
         local c_len = reaper.GetMediaItemInfo_Value(candidate, "D_LENGTH")
-
-        -- Même position et même longueur
         if math.abs(c_pos - ref_pos) < 0.0001 and math.abs(c_len - ref_len) < 0.0001 then
-          -- Check item group
-          if item_group > 0 then
-            local c_group = math.floor(reaper.GetMediaItemInfo_Value(candidate, "I_GROUPID"))
-            if c_group == item_group then
-              in_item_group = true
-            end
-          end
-
-          if in_item_group or in_track_group then
-            table.insert(result, candidate)
+          local c_group = math.floor(reaper.GetMediaItemInfo_Value(candidate, "I_GROUPID"))
+          if in_track_group
+          or (item_group > 0 and c_group == item_group)
+          or selected[candidate] then
+            add(candidate)
           end
         end
       end
     end
   end
 
+  return result
+end
+
+-- Retourne tous les items sélectionnés sauf ref_item, quelle que soit leur position.
+function PA_GetAllSelectedItems(ref_item)
+  local result = {}
+  for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
+    local candidate = reaper.GetSelectedMediaItem(0, i)
+    if candidate ~= ref_item then
+      table.insert(result, candidate)
+    end
+  end
   return result
 end
 
@@ -76,12 +82,13 @@ function PA_TrimItemLeft(item, new_pos)
   local item_len    = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
   local delta       = item_start - new_pos
   local take        = reaper.GetActiveTake(item)
-  local start_offs  = take and reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") or 0
 
   reaper.SetMediaItemInfo_Value(item, "D_POSITION", new_pos)
   reaper.SetMediaItemInfo_Value(item, "D_LENGTH",   item_len + delta)
   if take then
-    reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", start_offs - delta)
+    local playrate   = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+    local start_offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+    reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", start_offs - delta * playrate)
   end
 end
 

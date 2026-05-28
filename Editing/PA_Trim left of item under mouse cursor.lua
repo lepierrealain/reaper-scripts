@@ -41,7 +41,7 @@ local function main()
   if item then
     -- Souris sur un item : couper et supprimer la partie gauche
     -- SplitMediaItem retourne la partie droite ; l'original devient la partie gauche
-    local grouped = PA_GetGroupedItemsAtSamePosition(item)
+    local grouped = PA_GetRelatedItemsAtSamePosition(item)
     local right_part = reaper.SplitMediaItem(item, split_time)
     if right_part then
       reaper.DeleteTrackMediaItem(track, item)
@@ -65,7 +65,7 @@ local function main()
       return
     end
 
-    local grouped = PA_GetGroupedItemsAtSamePosition(right_item)
+    local grouped = PA_GetRelatedItemsAtSamePosition(right_item)
     PA_TrimItemLeft(right_item, split_time)
     for _, gi in ipairs(grouped) do
       PA_TrimItemLeft(gi, split_time)

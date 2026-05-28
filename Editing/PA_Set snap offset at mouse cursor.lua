@@ -16,7 +16,7 @@ local function main()
   local item_start  = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
   local snap_offset = snap_time - item_start
 
-  local grouped = PA_GetGroupedItemsAtSamePosition(item)
+  local grouped = PA_GetRelatedItemsAtSamePosition(item)
 
   reaper.Undo_BeginBlock()
   reaper.SetMediaItemInfo_Value(item, "D_SNAPOFFSET", snap_offset)
