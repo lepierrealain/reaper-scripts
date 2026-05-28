@@ -1,3 +1,7 @@
+-- @description Mouse functions
+-- @author lepierrealain
+-- @version 1.0
+
 -- Bibliothèque utilitaire : contexte souris dans l'arrangeur REAPER
 -- Importable via : dofile(reaper.GetResourcePath() .. "/Scripts/...chemin.../PA_lib_mouse.lua")
 -- Seules les fonctions sont définies ici ; aucun code n'est exécuté à l'import.
