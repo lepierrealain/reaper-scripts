@@ -14,6 +14,8 @@
 
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 Pierre-Alain's scripts for Reaper\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 Just trying to make something cool.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Install\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Via Reapack, import repository https://github.com/lepierrealain/reaper-scripts/raw/master/index.xml\par}
 }
 ]]></description>
   </metadata>
