@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="4b5206b8690c5e545070ab6fbd78d470eb919868">
+<index version="1" name="Pierre-Alain Scripts" commit="49acdb44d25669ff767b908bdb8ab783668a623b">
   <category name="Editing">
     <reapack name="PA_lib_item.lua" type="script" desc="Item utility functions">
       <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
@@ -14,6 +14,11 @@
     <reapack name="PA_Select item under mouse cursor.lua" type="script" desc="Select item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T09:58:01Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/d352aff6be283e2f10a599cb085c5f516ae7bcb7/Editing/PA_Select%20item%20under%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set snap offset at mouse cursor.lua" type="script" desc="Set snap offset at mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-05-28T16:41:09Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/49acdb44d25669ff767b908bdb8ab783668a623b/Editing/PA_Set%20snap%20offset%20at%20mouse%20cursor.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Split item under mouse cursor.lua" type="script" desc="Split item under mouse cursor">
