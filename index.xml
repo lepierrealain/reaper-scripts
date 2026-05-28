@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="dbb092e198304ec9fecd5deb21fa9e162e1aac0b">
+<index version="1" name="Pierre-Alain Scripts" commit="441511638b30d2857daae69d6e8eb15e245e7a53">
   <category name="Editing">
+    <reapack name="PA_lib_mouse.lua" type="script" desc="Mouse functions">
+      <version name="1.0" author="lepierrealain" time="2026-05-28T11:48:22Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/441511638b30d2857daae69d6e8eb15e245e7a53/Editing/PA_lib_mouse.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Select item under mouse cursor.lua" type="script" desc="Select item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T09:58:01Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/d352aff6be283e2f10a599cb085c5f516ae7bcb7/Editing/PA_Select%20item%20under%20mouse%20cursor.lua</source>
