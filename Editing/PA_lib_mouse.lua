@@ -21,10 +21,10 @@ function PA_GetMouseArrangeContext()
   return track, mouse_time
 end
 
--- Retourne l'item sous la souris dans l'arrangeur, ou nil.
+-- Retourne l'item et le temps sous la souris dans l'arrangeur, ou nil, nil.
 function PA_GetItemUnderMouse()
   local track, mouse_time = PA_GetMouseArrangeContext()
-  if not track or not mouse_time then return nil end
+  if not track or not mouse_time then return nil, nil end
 
   local num_items = reaper.CountTrackMediaItems(track)
   for i = 0, num_items - 1 do
@@ -32,8 +32,8 @@ function PA_GetItemUnderMouse()
     local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
     local item_end   = item_start + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
     if mouse_time >= item_start and mouse_time < item_end then
-      return item
+      return item, mouse_time
     end
   end
-  return nil
+  return nil, nil
 end
