@@ -42,14 +42,22 @@ local function main()
     -- Souris sur un item : couper et supprimer la partie gauche
     -- SplitMediaItem retourne la partie droite ; l'original devient la partie gauche
     local grouped = PA_GetRelatedItemsAtSamePosition(item)
+    local fadein = reaper.GetMediaItemInfo_Value(item, "D_FADEINLEN")
     local right_part = reaper.SplitMediaItem(item, split_time)
     if right_part then
       reaper.DeleteTrackMediaItem(track, item)
+      if fadein > 0 then
+        reaper.SetMediaItemInfo_Value(right_part, "D_FADEINLEN", fadein)
+      end
       for _, gi in ipairs(grouped) do
         local gi_track = reaper.GetMediaItemTrack(gi)
+        local gi_fadein = reaper.GetMediaItemInfo_Value(gi, "D_FADEINLEN")
         local gi_right = reaper.SplitMediaItem(gi, split_time)
         if gi_right then
           reaper.DeleteTrackMediaItem(gi_track, gi)
+          if gi_fadein > 0 then
+            reaper.SetMediaItemInfo_Value(gi_right, "D_FADEINLEN", gi_fadein)
+          end
         end
       end
     end

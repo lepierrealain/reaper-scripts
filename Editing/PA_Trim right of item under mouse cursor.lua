@@ -43,14 +43,24 @@ local function main()
     -- Souris sur un item : couper et supprimer la partie droite
     -- SplitMediaItem retourne la partie droite ; l'original devient la partie gauche
     local grouped = PA_GetRelatedItemsAtSamePosition(item)
+    local fadeout = reaper.GetMediaItemInfo_Value(item, "D_FADEOUTLEN")
     local right_part = reaper.SplitMediaItem(item, split_time)
     if right_part then
       reaper.DeleteTrackMediaItem(track, right_part)
+      if fadeout > 0 then
+        local new_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+        reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.min(fadeout, new_len))
+      end
       for _, gi in ipairs(grouped) do
         local gi_track = reaper.GetMediaItemTrack(gi)
+        local gi_fadeout = reaper.GetMediaItemInfo_Value(gi, "D_FADEOUTLEN")
         local gi_right = reaper.SplitMediaItem(gi, split_time)
         if gi_right then
           reaper.DeleteTrackMediaItem(gi_track, gi_right)
+          if gi_fadeout > 0 then
+            local gi_new_len = reaper.GetMediaItemInfo_Value(gi, "D_LENGTH")
+            reaper.SetMediaItemInfo_Value(gi, "D_FADEOUTLEN", math.min(gi_fadeout, gi_new_len))
+          end
         end
       end
     end
