@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="1cdfec19e7b7cfb065bcc63590396ede317787ea">
+<index version="1" name="Pierre-Alain Scripts" commit="bb0be664a25a7d7a86607c4678701e406d6dd8c6">
   <category name="Editing">
+    <reapack name="PA_Add fade in to item under mouse cursor.lua" type="script" desc="Add fade in to item under mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-05-29T20:11:35Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb0be664a25a7d7a86607c4678701e406d6dd8c6/Editing/PA_Add%20fade%20in%20to%20item%20under%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Add fade out to item under mouse cursor.lua" type="script" desc="Add fade out to item under mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-05-29T20:11:35Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb0be664a25a7d7a86607c4678701e406d6dd8c6/Editing/PA_Add%20fade%20out%20to%20item%20under%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_lib_item.lua" type="script" desc="Item utility functions">
       <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/4b5206b8690c5e545070ab6fbd78d470eb919868/Editing/PA_lib_item.lua</source>
@@ -24,6 +34,11 @@
     <reapack name="PA_Set snap offset at mouse cursor.lua" type="script" desc="Set snap offset at mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T16:41:09Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/49acdb44d25669ff767b908bdb8ab783668a623b/Editing/PA_Set%20snap%20offset%20at%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Split all items at mouse cursor.lua" type="script" desc="Split all items at mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-05-29T20:11:35Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb0be664a25a7d7a86607c4678701e406d6dd8c6/Editing/PA_Split%20all%20items%20at%20mouse%20cursor.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Split item under mouse cursor.lua" type="script" desc="Split item under mouse cursor">
