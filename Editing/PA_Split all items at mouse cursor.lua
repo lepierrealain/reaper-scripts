@@ -3,7 +3,8 @@
 -- @version 1.0
 
 local lib_path = ({ reaper.get_action_context() })[2]:match("^(.+[\\/])")
-dofile(lib_path .. "PA_lib_mouse.lua")
+local lib_root = lib_path .. ".." .. package.config:sub(1,1) .. "Libraries" .. package.config:sub(1,1)
+dofile(lib_root .. "PA_lib_mouse.lua")
 
 local function main()
   local _, mouse_time = PA_GetMouseArrangeContext()

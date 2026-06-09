@@ -3,8 +3,9 @@
 -- @version 1.0
 
 local lib_path = ({ reaper.get_action_context() })[2]:match("^(.+[\\/])")
-dofile(lib_path .. "PA_lib_mouse.lua")
-dofile(lib_path .. "PA_lib_item.lua")
+local lib_root = lib_path .. ".." .. package.config:sub(1,1) .. "Libraries" .. package.config:sub(1,1)
+dofile(lib_root .. "PA_lib_mouse.lua")
+dofile(lib_root .. "PA_lib_item.lua")
 
 local function is_item_visible(item)
   local view_start, view_end = reaper.GetSet_ArrangeView2(0, false, 0, 0)
