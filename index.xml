@@ -1,9 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="8e8c9f2decf44a566a57d18ae0650471b42792a7">
+<index version="1" name="Pierre-Alain Scripts" commit="a934c4b99e39b9901373c3abfe3254adca2c12cd">
   <category name="Custom">
+    <reapack name="PA_Add compressor.lua" type="script" desc="Add compressor on selected track (always add, never show existing)">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Custom/PA_Add%20compressor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Add EQ.lua" type="script" desc="Add EQ on selected track (always add, never show existing)">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Custom/PA_Add%20EQ.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Add instrument.lua" type="script" desc="Add instrument on selected track (always add, never show existing)">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Custom/PA_Add%20instrument.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Add plugin.lua" type="script" desc="Add plugin to selected track (searchable list)">
       <version name="1.2" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Add%20plugin.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Add reverb.lua" type="script" desc="Add reverb on selected track (always add, never show existing)">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Custom/PA_Add%20reverb.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Add saturation.lua" type="script" desc="Add saturation on selected track (always add, never show existing)">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Custom/PA_Add%20saturation.lua</source>
       </version>
     </reapack>
     <reapack name="PA_New track template.lua" type="script" desc="Insert new track in same folder as previous track">
@@ -73,6 +98,16 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb0be664a25a7d7a86607c4678701e406d6dd8c6/Editing/PA_Add%20fade%20out%20to%20item%20under%20mouse%20cursor.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Duplicate item to fill measure.lua" type="script" desc="Duplicate item to fill measure">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Editing/PA_Duplicate%20item%20to%20fill%20measure.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Duplicate item to track under mouse.lua" type="script" desc="Duplicate item to track under mouse">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Editing/PA_Duplicate%20item%20to%20track%20under%20mouse.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Remove item invert ripple.lua" type="script" desc="Remove item (invert ripple state)">
       <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Remove%20item%20invert%20ripple.lua</source>
@@ -130,6 +165,11 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_item.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_lib_midi.lua" type="script" desc="MIDI utility functions">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Libraries/PA_lib_midi.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_lib_mouse.lua" type="script" desc="Mouse functions">
       <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_mouse.lua</source>
@@ -143,6 +183,18 @@
     <reapack name="PA_lib_track.lua" type="script" desc="Track utility functions">
       <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_track.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Midi">
+    <reapack name="PA_Trim note left.lua" type="script" desc="Trim left of MIDI note under mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Midi/PA_Trim%20note%20left.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Trim note right.lua" type="script" desc="Trim right of MIDI note under mouse cursor">
+      <version name="1.3" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Midi/PA_Trim%20note%20right.lua</source>
       </version>
     </reapack>
   </category>
@@ -167,6 +219,11 @@
     <reapack name="PA_New track.lua" type="script" desc="Insert new track in same folder as previous track">
       <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Tracks/PA_New%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Track volume.lua" type="script" desc="Track volume under mouse (move mouse to adjust)">
+      <version name="1.5" author="lepierrealain" time="2026-06-11T15:55:27Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Tracks/PA_Track%20volume.lua</source>
       </version>
     </reapack>
   </category>
