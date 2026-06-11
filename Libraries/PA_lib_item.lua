@@ -76,7 +76,7 @@ function PA_GetAllSelectedItems(ref_item)
 end
 
 -- Trim le bord gauche d'un item à new_pos (modifie position, longueur et start offset).
--- new_pos doit être à gauche de la position actuelle de l'item.
+-- Pour les items MIDI, étend aussi la source si new_pos est avant le début actuel.
 function PA_TrimItemLeft(item, new_pos)
   local item_start  = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
   local item_len    = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
@@ -86,15 +86,83 @@ function PA_TrimItemLeft(item, new_pos)
   reaper.SetMediaItemInfo_Value(item, "D_POSITION", new_pos)
   reaper.SetMediaItemInfo_Value(item, "D_LENGTH",   item_len + delta)
   if take then
-    local playrate   = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
-    local start_offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
-    reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", start_offs - delta * playrate)
+    if reaper.TakeIsMIDI(take) then
+      local playrate     = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+      local ticks_per_qn = 960
+      local old_start_qn = reaper.TimeMap2_timeToQN(0, item_start)
+      local new_start_qn = reaper.TimeMap2_timeToQN(0, new_pos)
+      local extra_ticks  = math.floor((old_start_qn - new_start_qn) * ticks_per_qn * playrate + 0.5)
+      local delta_soffs  = delta * playrate
+
+      -- Récupérer le GUID de la source poolée avant de dépooler
+      local pool_guid = nil
+      local ok0, chunk0 = reaper.GetItemStateChunk(item, "", false)
+      if ok0 then
+        pool_guid = chunk0:match("POOLEDEVTS ({[^}]+})")
+      end
+
+      -- Dépooler uniquement cet item
+      local sel_count = reaper.CountSelectedMediaItems(0)
+      local prev_sel  = {}
+      for i = 0, sel_count - 1 do prev_sel[i] = reaper.GetSelectedMediaItem(0, i) end
+      reaper.SelectAllMediaItems(0, false)
+      reaper.SetMediaItemSelected(item, true)
+      reaper.Main_OnCommand(40861, 0) -- MIDI: Unpool MIDI source
+      reaper.SelectAllMediaItems(0, false)
+      for _, sel_item in pairs(prev_sel) do reaper.SetMediaItemSelected(sel_item, true) end
+
+      -- Modifier le chunk pour étendre la source
+      local ok, chunk = reaper.GetItemStateChunk(item, "", false)
+      if ok then
+        local replaced = false
+        chunk = chunk:gsub("(Em )(%d+)( 90 00 01)", function(a, offset_str, b)
+          if not replaced then
+            replaced = true
+            return a .. (tonumber(offset_str) + extra_ticks) .. b
+          end
+        end)
+        if not replaced then
+          chunk = chunk:gsub("(HASDATA 1 %d+ QN\n)", "%1Em " .. extra_ticks .. " 90 00 01\nEm 1 80 00 00\n")
+        end
+        reaper.SetItemStateChunk(item, chunk, false)
+      end
+
+      -- Compenser le décalage sur toutes les autres instances poolées
+      if pool_guid then
+        for t = 0, reaper.CountTracks(0) - 1 do
+          local track = reaper.GetTrack(0, t)
+          for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+            local other = reaper.GetTrackMediaItem(track, i)
+            if other ~= item then
+              local other_take = reaper.GetActiveTake(other)
+              if other_take and reaper.TakeIsMIDI(other_take) then
+                local ok2, chunk2 = reaper.GetItemStateChunk(other, "", false)
+                if ok2 and chunk2:find(pool_guid, 1, true) then
+                  local other_soffs = reaper.GetMediaItemTakeInfo_Value(other_take, "D_STARTOFFS")
+                  reaper.SetMediaItemTakeInfo_Value(other_take, "D_STARTOFFS", other_soffs + delta_soffs)
+                end
+              end
+            end
+          end
+        end
+      end
+    else
+      local playrate   = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+      local start_offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+      reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", start_offs - delta * playrate)
+    end
   end
 end
 
 -- Trim le bord droit d'un item à new_end (modifie uniquement la longueur).
--- new_end doit être à droite du début de l'item.
+-- Pour les items MIDI, étend aussi la source en insérant une note muette à la cible.
 function PA_TrimItemRight(item, new_end)
   local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
   reaper.SetMediaItemInfo_Value(item, "D_LENGTH", new_end - item_start)
+  local take = reaper.GetActiveTake(item)
+  if take and reaper.TakeIsMIDI(take) then
+    local target_ppq = reaper.MIDI_GetPPQPosFromProjTime(take, new_end)
+    reaper.MIDI_InsertNote(take, false, true, target_ppq - 1, target_ppq, 0, 0, 1, true)
+    reaper.MIDI_Sort(take)
+  end
 end

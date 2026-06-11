@@ -73,6 +73,12 @@ local function main()
       reaper.Undo_EndBlock("Trim left of item under mouse cursor", -1)
       return
     end
+    -- Ne rien faire si split_time est déjà le début exact de l'item
+    local right_start = reaper.GetMediaItemInfo_Value(right_item, "D_POSITION")
+    if math.abs(right_start - split_time) < 0.0001 then
+      reaper.Undo_EndBlock("Trim left of item under mouse cursor", -1)
+      return
+    end
 
     local grouped = PA_GetRelatedItemsAtSamePosition(right_item)
     PA_TrimItemLeft(right_item, split_time)

@@ -2,10 +2,21 @@
 -- @author lepierrealain
 -- @version 1.0
 
+function PA_AddFX(tag_key, tag_prefix, ctx_name, caller_path)
+  local track = reaper.GetSelectedTrack(0, 0)
+  if not track then return end
+
+  local EXT = "PA_AddPlugin"
+  reaper.SetExtState(EXT, "init_filter", tag_prefix, false)
+  reaper.SetExtState(EXT, "init_mini",   "1",        false)
+  local sep = package.config:sub(1,1)
+  local dir = caller_path:match("^(.+[\\/])")
+  dofile(dir .. ".." .. sep .. "Custom" .. sep .. "PA_Add plugin.lua")
+end
+
 function PA_ShowFX(tag_key, tag_prefix, ctx_name, caller_path)
   local mouse_x, mouse_y = reaper.GetMousePosition()
-  local track = reaper.GetTrackFromPoint(mouse_x, mouse_y)
-  if not track then track = reaper.GetSelectedTrack(0, 0) end
+  local track = reaper.GetSelectedTrack(0, 0)
   if not track then return end
 
   local tagged = {}

@@ -8,8 +8,7 @@ local lib_root = lib_path .. ".." .. package.config:sub(1,1) .. "Libraries" .. p
 dofile(lib_root .. "PA_lib_track.lua")
 
 local mouse_x, mouse_y = reaper.GetMousePosition()
-local track = reaper.GetTrackFromPoint(mouse_x, mouse_y)
-if not track then track = reaper.GetSelectedTrack(0, 0) end
+local track = reaper.GetSelectedTrack(0, 0)
 if not track then return end
 
 local instruments = {}

@@ -39,6 +39,30 @@ local function IsDescendantOfMusic(item)
 end
 
 -------------------------------------------------------
+-- TRIM gauche jusqu'au premier event MIDI
+-------------------------------------------------------
+local function TrimToFirstMidiNote(item, take)
+  local note_cnt = r.MIDI_CountEvts(take)
+  if note_cnt == 0 then return end
+
+  local first_ppq = math.huge
+  for n = 0, note_cnt - 1 do
+    local _, _, _, start_ppq = r.MIDI_GetNote(take, n)
+    if start_ppq < first_ppq then first_ppq = start_ppq end
+  end
+
+  if first_ppq == math.huge then return end
+
+  local first_time = r.MIDI_GetProjTimeFromPPQPos(take, first_ppq)
+  local it_start   = r.GetMediaItemInfo_Value(item, 'D_POSITION')
+  local it_end     = it_start + r.GetMediaItemInfo_Value(item, 'D_LENGTH')
+
+  if first_time > it_start and first_time < it_end then
+    r.BR_SetItemEdges(item, first_time, it_end)
+  end
+end
+
+-------------------------------------------------------
 -- SNAP EDGE sur les items sélectionnés (MIDI, sous "Music")
 -------------------------------------------------------
 local function SnapSelectedItems()
@@ -47,7 +71,7 @@ local function SnapSelectedItems()
   for i = sel_count - 1, 0, -1 do
     local item = r.GetSelectedMediaItem(0, i)
     local take = r.GetActiveTake(item)
-    if not take or not r.TakeIsMIDI(take) or not IsDescendantOfMusic(item) then
+    if not take or not r.TakeIsMIDI(take) then
       r.SetMediaItemSelected(item, false)
     end
   end
@@ -57,26 +81,31 @@ local function SnapSelectedItems()
 
   for i = 0, items_count - 1 do
     local item = r.GetSelectedMediaItem(0, i)
+    local take = r.GetActiveTake(item)
 
-    local it_start = r.GetMediaItemInfo_Value(item, 'D_POSITION')
-    local it_len   = r.GetMediaItemInfo_Value(item, 'D_LENGTH')
-    local it_end   = it_start + it_len
+    if IsDescendantOfMusic(item) then
+      local it_start = r.GetMediaItemInfo_Value(item, 'D_POSITION')
+      local it_len   = r.GetMediaItemInfo_Value(item, 'D_LENGTH')
+      local it_end   = it_start + it_len
 
-    local _, start_meas_idx = r.TimeMap2_timeToBeats(0, it_start)
-    local new_start = r.TimeMap_GetMeasureInfo(0, start_meas_idx)
+      local _, start_meas_idx = r.TimeMap2_timeToBeats(0, it_start)
+      local new_start = r.TimeMap_GetMeasureInfo(0, start_meas_idx)
 
-    local _, end_meas_idx = r.TimeMap2_timeToBeats(0, it_end)
-    local end_meas_time = r.TimeMap_GetMeasureInfo(0, end_meas_idx)
+      local _, end_meas_idx = r.TimeMap2_timeToBeats(0, it_end)
+      local end_meas_time = r.TimeMap_GetMeasureInfo(0, end_meas_idx)
 
-    local new_end
-    if it_end > (end_meas_time + 1e-7) then
-      new_end = r.TimeMap_GetMeasureInfo(0, end_meas_idx + 1)
+      local new_end
+      if it_end > (end_meas_time + 1e-7) then
+        new_end = r.TimeMap_GetMeasureInfo(0, end_meas_idx + 1)
+      else
+        new_end = end_meas_time
+      end
+
+      if new_start ~= it_start or new_end ~= it_end then
+        r.BR_SetItemEdges(item, new_start, new_end)
+      end
     else
-      new_end = end_meas_time
-    end
-
-    if new_start ~= it_start or new_end ~= it_end then
-      r.BR_SetItemEdges(item, new_start, new_end)
+      TrimToFirstMidiNote(item, take)
     end
   end
 

@@ -83,7 +83,7 @@ local mini_mode    = reaper.GetExtState(EXT_SECTION, "init_mini") == "1"
 reaper.DeleteExtState(EXT_SECTION, "init_filter", false)
 reaper.DeleteExtState(EXT_SECTION, "init_mini",   false)
 
-local MINI_W, MINI_H = 400, 300
+local MINI_W, MINI_H = 400, 400
 local FULL_W, FULL_H = 800, 600
 
 local filter_buf         = _init_filter or ""
@@ -268,8 +268,11 @@ local function loop()
   if win_init then
     if mini_mode then
       local mx, my = reaper.GetMousePosition()
+      local sw, sh = reaper.ImGui_Viewport_GetSize(reaper.ImGui_GetMainViewport(ctx))
+      local wx = math.max(0, math.min(mx - MINI_W * 0.5, sw - MINI_W))
+      local wy = math.max(0, math.min(my - MINI_H * 0.5, sh - MINI_H))
       reaper.ImGui_SetNextWindowSize(ctx, MINI_W, MINI_H)
-      reaper.ImGui_SetNextWindowPos(ctx, mx - MINI_W * 0.5, my - MINI_H * 0.5, reaper.ImGui_Cond_Always())
+      reaper.ImGui_SetNextWindowPos(ctx, wx, wy, reaper.ImGui_Cond_Always())
     else
       local sw, sh = reaper.ImGui_Viewport_GetSize(reaper.ImGui_GetMainViewport(ctx))
       reaper.ImGui_SetNextWindowSize(ctx, FULL_W, FULL_H)
