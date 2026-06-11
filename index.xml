@@ -1,5 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="bb0be664a25a7d7a86607c4678701e406d6dd8c6">
+<index version="1" name="Pierre-Alain Scripts" commit="8e8c9f2decf44a566a57d18ae0650471b42792a7">
+  <category name="Custom">
+    <reapack name="PA_Add plugin.lua" type="script" desc="Add plugin to selected track (searchable list)">
+      <version name="1.2" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Add%20plugin.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_New track template.lua" type="script" desc="Insert new track in same folder as previous track">
+      <version name="1.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_New%20track%20template.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set track template (quick).lua" type="script" desc="Toggle track template between MIDI and Input 1">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Set%20track%20template%20(quick).lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set track template to Input 1.lua" type="script" desc="Set selected track to audio 1 record template">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Set%20track%20template%20to%20Input%201.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set track template to Input 2.lua" type="script" desc="Set selected track to audio 1 record template">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Set%20track%20template%20to%20Input%202.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set track template to midi.lua" type="script" desc="Set selected track to MIDI record template">
+      <version name="1.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Set%20track%20template%20to%20midi.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set track template.lua" type="script" desc="Set track record template (MIDI / Input 1 / Input 2)">
+      <version name="1.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Set%20track%20template.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Show compressor.lua" type="script" desc="Show compressor on track under mouse (add if missing, picker if multiple)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Show%20compressor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Show EQ.lua" type="script" desc="Show EQ on track under mouse (add if missing, picker if multiple)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Show%20EQ.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Show instrument.lua" type="script" desc="Show first active instrument on track under mouse (picker if multiple, add from favs if none)">
+      <version name="1.4" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Show%20instrument.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Show reverb.lua" type="script" desc="Show reverb on track under mouse (add if missing, picker if multiple)">
+      <version name="2.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Show%20reverb.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Show saturation.lua" type="script" desc="Show saturation on track under mouse (add if missing, picker if multiple)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Custom/PA_Show%20saturation.lua</source>
+      </version>
+    </reapack>
+  </category>
   <category name="Editing">
     <reapack name="PA_Add fade in to item under mouse cursor.lua" type="script" desc="Add fade in to item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-29T20:11:35Z">
@@ -11,14 +73,9 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb0be664a25a7d7a86607c4678701e406d6dd8c6/Editing/PA_Add%20fade%20out%20to%20item%20under%20mouse%20cursor.lua</source>
       </version>
     </reapack>
-    <reapack name="PA_lib_item.lua" type="script" desc="Item utility functions">
-      <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
-        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/4b5206b8690c5e545070ab6fbd78d470eb919868/Editing/PA_lib_item.lua</source>
-      </version>
-    </reapack>
-    <reapack name="PA_lib_mouse.lua" type="script" desc="Mouse functions">
-      <version name="1.0" author="lepierrealain" time="2026-05-28T11:48:22Z">
-        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/441511638b30d2857daae69d6e8eb15e245e7a53/Editing/PA_lib_mouse.lua</source>
+    <reapack name="PA_Remove item invert ripple.lua" type="script" desc="Remove item (invert ripple state)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Remove%20item%20invert%20ripple.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Select all items on track under mouse cursor.lua" type="script" desc="Select all items on track under mouse cursor">
@@ -46,14 +103,70 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/dbb092e198304ec9fecd5deb21fa9e162e1aac0b/Editing/PA_Split%20item%20under%20mouse%20cursor.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Trim left of item under mouse cursor (defer).lua" type="script" desc="Trim left of item under mouse cursor (defer)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Trim%20left%20of%20item%20under%20mouse%20cursor%20(defer).lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Trim left of item under mouse cursor.lua" type="script" desc="Trim left of item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/4b5206b8690c5e545070ab6fbd78d470eb919868/Editing/PA_Trim%20left%20of%20item%20under%20mouse%20cursor.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Trim right of item under mouse cursor (defer).lua" type="script" desc="Trim right of item under mouse cursor (defer)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Trim%20right%20of%20item%20under%20mouse%20cursor%20(defer).lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Trim right of item under mouse cursor.lua" type="script" desc="Trim right of item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/4b5206b8690c5e545070ab6fbd78d470eb919868/Editing/PA_Trim%20right%20of%20item%20under%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Libraries">
+    <reapack name="PA_lib_item.lua" type="script" desc="Item utility functions">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_item.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_lib_mouse.lua" type="script" desc="Mouse functions">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_mouse.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_lib_show_fx.lua" type="script" desc="Show FX by tag category (used by PA_Show *.lua scripts)">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_show_fx.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_lib_track.lua" type="script" desc="Track utility functions">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Libraries/PA_lib_track.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Special">
+    <reapack name="PA_Auto region from items.lua" type="script" desc="Automatically add region from items from tracks">
+      <version name="2.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Special/PA_Auto%20region%20from%20items.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Init automation before regions.lua" type="script" desc="Insert automation item 1s before each region and at end of each region on all envelopes with points">
+      <version name="1.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Special/PA_Init%20automation%20before%20regions.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Record and snap edge to measure if Music.lua" type="script" desc="Record and snap edge to measure if music">
+      <version name="2.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Special/PA_Record%20and%20snap%20edge%20to%20measure%20if%20Music.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Tracks">
+    <reapack name="PA_New track.lua" type="script" desc="Insert new track in same folder as previous track">
+      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Tracks/PA_New%20track.lua</source>
       </version>
     </reapack>
   </category>
