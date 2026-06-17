@@ -7,9 +7,10 @@ local lib_root = lib_path .. ".." .. package.config:sub(1,1) .. "Libraries" .. p
 dofile(lib_root .. "PA_lib_mouse.lua")
 dofile(lib_root .. "PA_lib_item.lua")
 
-local target_item     = nil
-local target_grouped  = nil
-local prev_split_time = nil
+local target_item      = nil
+local target_grouped   = nil
+local target_lane      = nil
+local prev_split_time  = nil
 local last_was_stretch = false
 local STRETCH_EPSILON  = 0.0001  -- secondes
 
@@ -20,15 +21,17 @@ local function is_item_visible(item)
   return item_start < view_end and item_end > view_start
 end
 
-local function get_first_item_to_right(track, time)
+local function get_first_item_to_right(track, time, lane)
   local num_items = reaper.CountTrackMediaItems(track)
   local closest, closest_start = nil, math.huge
   for i = 0, num_items - 1 do
     local item = reaper.GetTrackMediaItem(track, i)
-    local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
-    if item_start > time and item_start < closest_start then
-      closest = item
-      closest_start = item_start
+    if lane == nil or math.floor(reaper.GetMediaItemInfo_Value(item, "I_FIXEDLANE")) == lane then
+      local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      if item_start > time and item_start < closest_start then
+        closest = item
+        closest_start = item_start
+      end
     end
   end
   return closest
@@ -41,6 +44,7 @@ local function resolve_target()
   if not track then return false end
 
   local split_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
+  target_lane = PA_GetHoveredFixedLane(track)
   local item = PA_GetItemUnderMouse()
 
   if item then
@@ -53,15 +57,17 @@ local function resolve_target()
   local num_items = reaper.CountTrackMediaItems(track)
   for i = 0, num_items - 1 do
     local candidate = reaper.GetTrackMediaItem(track, i)
-    local candidate_start = reaper.GetMediaItemInfo_Value(candidate, "D_POSITION")
-    if math.abs(candidate_start - split_time) < 0.0001 then
-      target_item    = candidate
-      target_grouped = PA_GetRelatedItemsAtSamePosition(candidate)
-      return "item", split_time
+    if target_lane == nil or math.floor(reaper.GetMediaItemInfo_Value(candidate, "I_FIXEDLANE")) == target_lane then
+      local candidate_start = reaper.GetMediaItemInfo_Value(candidate, "D_POSITION")
+      if math.abs(candidate_start - split_time) < 0.0001 then
+        target_item    = candidate
+        target_grouped = PA_GetRelatedItemsAtSamePosition(candidate)
+        return "item", split_time
+      end
     end
   end
 
-  local right_item = get_first_item_to_right(track, split_time)
+  local right_item = get_first_item_to_right(track, split_time, target_lane)
   if not right_item or not is_item_visible(right_item) then return false end
   target_item    = right_item
   target_grouped = PA_GetRelatedItemsAtSamePosition(right_item)

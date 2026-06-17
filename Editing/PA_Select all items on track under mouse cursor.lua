@@ -10,10 +10,15 @@ local function main()
   local track = select(1, PA_GetMouseArrangeContext())
   if not track then return end
 
+  local lane = PA_GetHoveredFixedLane(track)
+
   reaper.Undo_BeginBlock()
   reaper.SelectAllMediaItems(0, false)
   for i = 0, reaper.CountTrackMediaItems(track) - 1 do
-    reaper.SetMediaItemSelected(reaper.GetTrackMediaItem(track, i), true)
+    local item = reaper.GetTrackMediaItem(track, i)
+    if lane == nil or math.floor(reaper.GetMediaItemInfo_Value(item, "I_FIXEDLANE")) == lane then
+      reaper.SetMediaItemSelected(item, true)
+    end
   end
   reaper.UpdateArrange()
   reaper.Undo_EndBlock("Select all items on track under mouse cursor", -1)

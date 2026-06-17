@@ -14,15 +14,17 @@ local function is_item_visible(item)
   return item_start < view_end and item_end > view_start
 end
 
-local function get_first_item_to_right(track, time)
+local function get_first_item_to_right(track, time, lane)
   local num_items = reaper.CountTrackMediaItems(track)
   local closest, closest_start = nil, math.huge
   for i = 0, num_items - 1 do
     local item = reaper.GetTrackMediaItem(track, i)
-    local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
-    if item_start > time and item_start < closest_start then
-      closest = item
-      closest_start = item_start
+    if lane == nil or math.floor(reaper.GetMediaItemInfo_Value(item, "I_FIXEDLANE")) == lane then
+      local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      if item_start > time and item_start < closest_start then
+        closest = item
+        closest_start = item_start
+      end
     end
   end
   return closest
@@ -64,7 +66,7 @@ local function main()
     end
   else
     -- Souris sur du vide : étendre le premier item à droite par la gauche
-    local right_item = get_first_item_to_right(track, split_time)
+    local right_item = get_first_item_to_right(track, split_time, PA_GetHoveredFixedLane(track))
     if not right_item then
       reaper.Undo_EndBlock("Trim left of item under mouse cursor", -1)
       return
