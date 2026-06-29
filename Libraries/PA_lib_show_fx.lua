@@ -42,6 +42,23 @@ function PA_ShowFX(tag_key, tag_prefix, ctx_name, caller_path)
   end
 
   if #matches == 0 then
+    -- If exactly one tagged plugin is also a favorite, add it directly
+    local favorites = {}
+    for name in reaper.GetExtState("PA_AddPlugin", "favorites"):gmatch("([^|]+)") do
+      favorites[name] = true
+    end
+    local fav_tagged = {}
+    for name in raw:gmatch("([^|]+)") do
+      if favorites[name] then fav_tagged[#fav_tagged + 1] = name end
+    end
+    if #fav_tagged == 1 then
+      reaper.Undo_BeginBlock()
+      local idx = reaper.TrackFX_AddByName(track, fav_tagged[1], false, -1)
+      reaper.Undo_EndBlock("Add plugin: " .. fav_tagged[1], -1)
+      if idx >= 0 then reaper.TrackFX_Show(track, idx, 3) end
+      return
+    end
+
     local EXT = "PA_AddPlugin"
     reaper.SetExtState(EXT, "init_filter", tag_prefix, false)
     reaper.SetExtState(EXT, "init_mini",   "1",        false)

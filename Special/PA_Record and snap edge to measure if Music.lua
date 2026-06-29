@@ -39,26 +39,64 @@ local function IsDescendantOfMusic(item)
 end
 
 -------------------------------------------------------
--- TRIM gauche jusqu'au premier event MIDI
+-- Renvoie les bornes (temps projet) du contenu MIDI : premier et dernier
+-- event (notes, CC, sysex...). Renvoie nil si l'item est vide.
 -------------------------------------------------------
-local function TrimToFirstMidiNote(item, take)
-  local note_cnt = r.MIDI_CountEvts(take)
-  if note_cnt == 0 then return end
+local function GetMidiContentBounds(item, take)
+  local _, note_cnt, cc_cnt, syx_cnt = r.MIDI_CountEvts(take)
 
   local first_ppq = math.huge
+  local last_ppq  = -math.huge
+
+  -- Notes (start + end pris en compte)
   for n = 0, note_cnt - 1 do
-    local _, _, _, start_ppq = r.MIDI_GetNote(take, n)
-    if start_ppq < first_ppq then first_ppq = start_ppq end
+    local retval, _, _, start_ppq, end_ppq = r.MIDI_GetNote(take, n)
+    if retval then
+      if start_ppq < first_ppq then first_ppq = start_ppq end
+      if end_ppq > last_ppq then last_ppq = end_ppq end
+    end
   end
 
-  if first_ppq == math.huge then return end
+  -- CC
+  for n = 0, cc_cnt - 1 do
+    local retval, _, _, ppq = r.MIDI_GetCC(take, n)
+    if retval then
+      if ppq < first_ppq then first_ppq = ppq end
+      if ppq > last_ppq then last_ppq = ppq end
+    end
+  end
+
+  -- Sysex / text / meta
+  for n = 0, syx_cnt - 1 do
+    local retval, _, _, ppq = r.MIDI_GetTextSysexEvt(take, n)
+    if retval then
+      if ppq < first_ppq then first_ppq = ppq end
+      if ppq > last_ppq then last_ppq = ppq end
+    end
+  end
+
+  if first_ppq == math.huge or last_ppq == -math.huge then return nil end
 
   local first_time = r.MIDI_GetProjTimeFromPPQPos(take, first_ppq)
+  local last_time  = r.MIDI_GetProjTimeFromPPQPos(take, last_ppq)
+  return first_time, last_time
+end
+
+-------------------------------------------------------
+-- TRIM gauche/droite sur tous les events MIDI (notes, CC, sysex...)
+-------------------------------------------------------
+local function TrimToFirstMidiNote(item, take)
+  local first_time, last_time = GetMidiContentBounds(item, take)
+  if not first_time then return end
+
   local it_start   = r.GetMediaItemInfo_Value(item, 'D_POSITION')
   local it_end     = it_start + r.GetMediaItemInfo_Value(item, 'D_LENGTH')
 
-  if first_time > it_start and first_time < it_end then
-    r.BR_SetItemEdges(item, first_time, it_end)
+  local new_start = (first_time > it_start and first_time < it_end) and first_time or it_start
+  local new_end   = (last_time  < it_end   and last_time  > it_start) and last_time  or it_end
+
+  if new_start < new_end and (new_start ~= it_start or new_end ~= it_end) then
+    r.BR_SetItemEdges(item, new_start, new_end)
   end
 end
 
@@ -88,17 +126,45 @@ local function SnapSelectedItems()
       local it_len   = r.GetMediaItemInfo_Value(item, 'D_LENGTH')
       local it_end   = it_start + it_len
 
-      local _, start_meas_idx = r.TimeMap2_timeToBeats(0, it_start)
-      local new_start = r.TimeMap_GetMeasureInfo(0, start_meas_idx)
+      -- On snape sur les bornes du contenu MIDI (et non sur les bords bruts
+      -- de l'item) pour ne pas conserver de mesures blanches en début/fin.
+      local content_start, content_end = GetMidiContentBounds(item, take)
+      local snap_start = it_start
+      local snap_end   = it_end
+      if content_start then
+        if content_start > it_start and content_start < it_end then snap_start = content_start end
+        if content_end   < it_end   and content_end   > it_start then snap_end   = content_end   end
+      end
 
-      local _, end_meas_idx = r.TimeMap2_timeToBeats(0, it_end)
+      local _, start_meas_idx = r.TimeMap2_timeToBeats(0, snap_start)
+      local meas_start = r.TimeMap_GetMeasureInfo(0, start_meas_idx)
+      local next_meas_start = r.TimeMap_GetMeasureInfo(0, start_meas_idx + 1)
+      local meas_len = next_meas_start - meas_start
+
+      -- Par défaut on snape au début de la mesure qui contient le contenu.
+      -- Exception : si le contenu commence dans les 5% finaux de sa mesure
+      -- (mesure quasi vide), on snape plutôt au début de la mesure suivante.
+      local new_start
+      if meas_len > 0 and (snap_start - meas_start) > (meas_len * 0.95) then
+        new_start = next_meas_start
+      else
+        new_start = meas_start
+      end
+
+      local _, end_meas_idx = r.TimeMap2_timeToBeats(0, snap_end)
       local end_meas_time = r.TimeMap_GetMeasureInfo(0, end_meas_idx)
 
       local new_end
-      if it_end > (end_meas_time + 1e-7) then
+      if snap_end > (end_meas_time + 1e-7) then
         new_end = r.TimeMap_GetMeasureInfo(0, end_meas_idx + 1)
       else
         new_end = end_meas_time
+      end
+
+      -- Garde-fou : on ne doit jamais produire un item vide ou inversé
+      -- (ex. tout le contenu tient dans les 5% restants d'une seule mesure).
+      if new_start >= new_end then
+        new_start = meas_start
       end
 
       if new_start ~= it_start or new_end ~= it_end then
@@ -130,7 +196,9 @@ local function deferWatch()
   if armed then
     -- On a bien vu le record, et maintenant il est stoppé : on snape et on sort
     r.PreventUIRefresh(1)
+    r.Undo_BeginBlock()
     SnapSelectedItems()
+    r.Undo_EndBlock("Record and snap edge to measure (Music)", -1)
     r.PreventUIRefresh(-1)
   end
   -- armed == false : record n'a jamais démarré, on sort sans rien faire

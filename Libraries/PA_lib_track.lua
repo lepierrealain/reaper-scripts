@@ -18,6 +18,7 @@ function PA_SetTrackTemplateToInput(numInput)
     local track = reaper.GetSelectedTrack(0, i)
     reaper.SetMediaTrackInfo_Value(track, "I_RECINPUT", numInput - 1)  -- 1-based → 0-based
     reaper.SetMediaTrackInfo_Value(track, "I_RECMODE", 0)
+    reaper.SetMediaTrackInfo_Value(track, "I_RECMON", 0)  -- input monitoring off (audio)
 
     -- Désactiver l'auto record arm s'il est actif
     if reaper.GetToggleCommandState(40736) == 1 then
@@ -64,6 +65,7 @@ function PA_SetTrackTemplateToMidi()
     local track = reaper.GetSelectedTrack(0, i)
     reaper.SetMediaTrackInfo_Value(track, "I_RECINPUT", MIDI_INPUT_ALL)
     reaper.SetMediaTrackInfo_Value(track, "I_RECMODE", 0)
+    reaper.SetMediaTrackInfo_Value(track, "I_RECMON", 1)  -- input monitoring on (MIDI)
   end
 
   if reaper.GetToggleCommandState(40736) ~= 1 then

@@ -145,3 +145,38 @@ function PA_TrimNoteLeftUnderMouse(take, mouse_ppq, target_ppq, noteRow)
 
   return false
 end
+
+-- Récupère toutes les infos MIDI brutes d'une take (notes, CC, pitchbend, sysex, text, etc.).
+-- Retourne la chaîne d'événements MIDI, ou nil en cas d'échec.
+function PA_CopyAllMidi(take)
+  if not take or not reaper.TakeIsMIDI(take) then return nil end
+  local ok, midi = reaper.MIDI_GetAllEvts(take, "")
+  if not ok then return nil end
+  return midi
+end
+
+-- Colle toutes les infos MIDI brutes (issues de PA_CopyAllMidi) dans une take cible.
+-- Retourne true si l'opération a réussi.
+function PA_PasteAllMidi(take, midi)
+  if not take or not reaper.TakeIsMIDI(take) or not midi then return false end
+  reaper.MIDI_SetAllEvts(take, midi)
+  reaper.MIDI_Sort(take)
+  return true
+end
+
+-- Décale toute la chaîne d'événements MIDI brute de offset_ppq ticks vers la droite.
+-- Le format MIDI_GetAllEvts encode chaque événement avec un offset relatif (delta-time)
+-- sur 4 octets little-endian ; ajouter l'offset au tout premier événement décale l'ensemble.
+-- offset_ppq doit être un entier >= 0.
+function PA_OffsetAllMidi(midi, offset_ppq)
+  offset_ppq = math.floor(offset_ppq + 0.5)
+  if offset_ppq <= 0 or not midi or #midi < 4 then return midi end
+  local first_offset = string.unpack("<I4", midi)
+  local rest = midi:sub(5)
+  return string.pack("<I4", first_offset + offset_ppq) .. rest
+end
+
+-- Colle le MIDI brut dans une take en décalant l'ensemble de offset_ppq ticks vers la droite.
+function PA_PasteAllMidiWithOffset(take, midi, offset_ppq)
+  return PA_PasteAllMidi(take, PA_OffsetAllMidi(midi, offset_ppq))
+end

@@ -6,13 +6,10 @@ local EXT_NS      = "AutoRegions"
 local EXT_TRACKS  = "tracks"
 local EXT_MAP     = "map"
 local EXT_TITLE   = "title"
-local EXT_CFG     = "cfg"     -- par piste : tguid|src|custom  (sans use_global/mode/padding → niveau projet)
+local EXT_CFG     = "cfg"     -- par piste : tguid  (mode/padding/sep → niveau projet)
 local EXT_MODE    = "mode"    -- projet : mode|padding|sep
 
--- src   : 0=Track  1=Custom
 -- mode  : 0=Itemname  1=Numbering  2=Single
-local SRC_TRACK   = 0
-local SRC_CUSTOM  = 1
 local MODE_ITEM   = 0
 local MODE_NUM    = 1
 local MODE_SINGLE = 2
@@ -52,15 +49,11 @@ end
 -- Persistance
 -- ─────────────────────────────────────────────
 
--- Encodage par piste : tguid|src|custom  (mode et padding sont au niveau projet)
+-- Encodage par piste : tguid  (mode et padding sont au niveau projet)
 local function encodeCfg(track_cfg)
   local parts = {}
-  for tguid, c in pairs(track_cfg) do
-    parts[#parts + 1] = table.concat({
-      tguid,
-      tostring(c.src),
-      c.custom or "",
-    }, "|")
+  for tguid in pairs(track_cfg) do
+    parts[#parts + 1] = tguid
   end
   return table.concat(parts, ";")
 end
@@ -69,13 +62,9 @@ local function decodeCfg(str)
   local cfg = {}
   if not str or str == "" then return cfg end
   for _, entry in ipairs(split(str, ";")) do
-    local tguid, src, custom = entry:match("^([^|]+)|([01])|(.*)")
-    if tguid then
-      cfg[tguid] = {
-        src    = tonumber(src),
-        custom = custom or "",
-      }
-    end
+    -- Tolérant aux anciennes données (tguid|src|custom) : on ne garde que le tguid
+    local tguid = entry:match("^([^|]+)")
+    if tguid then cfg[tguid] = {} end
   end
   return cfg
 end
@@ -98,6 +87,19 @@ local function saveState(watched_guids, item_to_region, track_cfg, title, single
   reaper.SetProjExtState(0, EXT_NS, EXT_MAP, table.concat(parts, "|"))
 end
 
+-- Ensemble des index (display number) de régions réellement présentes dans le projet
+local function liveRegionIndexes()
+  local live = {}
+  local i = 0
+  while true do
+    local retval, isrgn, _, _, _, markrgnindex = reaper.EnumProjectMarkers(i)
+    if retval == 0 then break end
+    if isrgn then live[markrgnindex] = true end
+    i = i + 1
+  end
+  return live
+end
+
 local function loadState()
   local watched_guids  = {}
   local item_to_region = {}
@@ -110,15 +112,22 @@ local function loadState()
   local _, tracks_str = reaper.GetProjExtState(0, EXT_NS, EXT_TRACKS)
   if tracks_str and tracks_str ~= "" then watched_guids = split(tracks_str, "|") end
 
+  -- On ne réutilise un index sauvegardé que si la région existe encore.
+  -- Sinon (région supprimée manuellement depuis la dernière session), on l'oublie
+  -- pour qu'applyDiff la recrée.
+  local live = liveRegionIndexes()
+
   local _, map_str = reaper.GetProjExtState(0, EXT_NS, EXT_MAP)
   if map_str and map_str ~= "" then
     for _, pair in ipairs(split(map_str, "|")) do
       if pair:sub(1, 2) == "T:" then
         local tguid, idx = pair:sub(3):match("^(.+):(%d+)$")
-        if tguid and idx then single_regions[tguid] = tonumber(idx) end
+        idx = tonumber(idx)
+        if tguid and idx and live[idx] then single_regions[tguid] = idx end
       else
         local guid, idx = pair:match("^(.+):(%d+)$")
-        if guid and idx then item_to_region[guid] = tonumber(idx) end
+        idx = tonumber(idx)
+        if guid and idx and live[idx] then item_to_region[guid] = idx end
       end
     end
   end
@@ -178,12 +187,7 @@ local function buildSnapshot(watched_guids, track_cfg, title, proj_mode, proj_pa
       }
     end
 
-    local middle
-    if cfg.src == SRC_TRACK then
-      middle = trackName(track)
-    else
-      middle = (cfg.custom and cfg.custom ~= "") and cfg.custom or nil
-    end
+    local middle = trackName(track)
 
     local function make_name(suffix)
       local p = {}
@@ -289,7 +293,6 @@ local ui_mode          = MODE_ITEM   -- mode projet
 local ui_padding_str   = "1"         -- padding projet (pour Numbering)
 local ui_sep           = "_"         -- séparateur projet
 local ui_checks        = {}   -- tguid → bool
-local ui_cfg           = {}   -- tguid → { src, custom }
 local ui_tracks        = {}   -- liste ordonnée { guid, name, depth, color }
 
 local MODE_LABELS = { "Item name", "Numbering", "Single mode" }
@@ -319,14 +322,8 @@ local function openConfigUI(watched_guids, track_cfg, title, proj_mode, proj_pad
   ui_padding_str = tostring(proj_padding or 1)
   ui_sep         = proj_sep or "_"
   ui_checks      = {}
-  ui_cfg         = {}
   for _, t in ipairs(ui_tracks) do
     ui_checks[t.guid] = watched_set[t.guid] or false
-    local c = track_cfg[t.guid]
-    ui_cfg[t.guid] = {
-      src    = c and c.src or SRC_TRACK,
-      custom = c and c.custom or "",
-    }
   end
   ui_open = true
 end
@@ -382,18 +379,10 @@ local function tickConfigUI()
 
     if reaper.ImGui_Button(ctx, "Refresh tracks", 120, 0) then
       local saved_checks = {}
-      local saved_cfg    = {}
       for guid, v in pairs(ui_checks) do saved_checks[guid] = v end
-      for guid, v in pairs(ui_cfg)    do saved_cfg[guid]    = v end
       buildTrackList()
       for _, t in ipairs(ui_tracks) do
-        if saved_checks[t.guid] == nil then
-          ui_checks[t.guid] = false
-          ui_cfg[t.guid] = { src = SRC_TRACK, custom = "" }
-        else
-          ui_checks[t.guid] = saved_checks[t.guid]
-          ui_cfg[t.guid]    = saved_cfg[t.guid]
-        end
+        ui_checks[t.guid] = saved_checks[t.guid] or false
       end
     end
 
@@ -403,8 +392,6 @@ local function tickConfigUI()
     reaper.ImGui_BeginChild(ctx, "tracklist", 560, child_h)
 
     for _, t in ipairs(ui_tracks) do
-      local c = ui_cfg[t.guid]
-
       if t.depth > 0 then reaper.ImGui_Indent(ctx, t.depth * 12) end
 
       -- Couleur de piste
@@ -421,17 +408,6 @@ local function tickConfigUI()
 
       if has_color then reaper.ImGui_PopStyleColor(ctx) end
 
-      if ui_checks[t.guid] then
-        -- Prompt custom inline : si vide → SRC_TRACK, sinon → SRC_CUSTOM
-        reaper.ImGui_SameLine(ctx)
-        reaper.ImGui_SetNextItemWidth(ctx, 160)
-        local rc, cv = reaper.ImGui_InputText(ctx, "##cust_" .. t.guid, c.custom)
-        if rc then
-          c.custom = cv
-          c.src = (cv and cv ~= "") and SRC_CUSTOM or SRC_TRACK
-        end
-      end
-
       if t.depth > 0 then reaper.ImGui_Unindent(ctx, t.depth * 12) end
     end
 
@@ -447,11 +423,7 @@ local function tickConfigUI()
       for _, t in ipairs(ui_tracks) do
         if ui_checks[t.guid] then
           selected[#selected + 1] = t.guid
-          local c = ui_cfg[t.guid]
-          new_cfg[t.guid] = {
-            src    = c.src,
-            custom = c.custom or "",
-          }
+          new_cfg[t.guid] = {}
         end
       end
       local sep = (ui_sep and ui_sep ~= "") and ui_sep or "_"
@@ -541,8 +513,18 @@ local function applyResult(result)
     if not curr[guid] then item_to_region[guid] = nil end
   end
 
+  -- Single mode : réamorcer prev_single avec name="" pour les régions déjà
+  -- existantes, afin que le prochain applyDiff renomme la région si le naming
+  -- a changé (même si l'item n'a pas bougé).
+  local reseed_single = {}
+  for tguid, data in pairs(curr_s) do
+    if single_regions[tguid] then
+      reseed_single[tguid] = { pos = data.pos, len = data.len, name = "" }
+    end
+  end
+
   saveState(watched_guids, item_to_region, track_cfg, title, single_regions, proj_mode, proj_padding, proj_sep)
-  prev_single = curr_s
+  prev_single = reseed_single
   return true
 end
 
