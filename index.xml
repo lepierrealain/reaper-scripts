@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="a934c4b99e39b9901373c3abfe3254adca2c12cd">
+<index version="1" name="Pierre-Alain Scripts" commit="6c54873237bb1e3b7796e0761a3af5e1e85485ef">
   <category name="Custom">
     <reapack name="PA_Add compressor.lua" type="script" desc="Add compressor on selected track (always add, never show existing)">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
@@ -102,6 +102,9 @@
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Editing/PA_Duplicate%20item%20to%20fill%20measure.lua</source>
       </version>
+      <version name="1.1" author="lepierrealain" time="2026-06-29T12:03:43Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Editing/PA_Duplicate%20item%20to%20fill%20measure.lua</source>
+      </version>
     </reapack>
     <reapack name="PA_Duplicate item to track under mouse.lua" type="script" desc="Duplicate item to track under mouse">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
@@ -111,6 +114,16 @@
     <reapack name="PA_Remove item invert ripple.lua" type="script" desc="Remove item (invert ripple state)">
       <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Remove%20item%20invert%20ripple.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Remove silence under mouse cusor.lua" type="script" desc="Remove silence under mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Editing/PA_Remove%20silence%20under%20mouse%20cusor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Select all items on track under mouse cursor (defer).lua" type="script" desc="Select all items on track under mouse cursor (defer)">
+      <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Editing/PA_Select%20all%20items%20on%20track%20under%20mouse%20cursor%20(defer).lua</source>
       </version>
     </reapack>
     <reapack name="PA_Select all items on track under mouse cursor.lua" type="script" desc="Select all items on track under mouse cursor">
@@ -138,19 +151,19 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/dbb092e198304ec9fecd5deb21fa9e162e1aac0b/Editing/PA_Split%20item%20under%20mouse%20cursor.lua</source>
       </version>
     </reapack>
-    <reapack name="PA_Trim left of item under mouse cursor (defer).lua" type="script" desc="Trim left of item under mouse cursor (defer)">
-      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
-        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Trim%20left%20of%20item%20under%20mouse%20cursor%20(defer).lua</source>
+    <reapack name="PA_Trim from mouse cursor to next midi note.lua" type="script" desc="Trim from mouse cursor to next midi note">
+      <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Editing/PA_Trim%20from%20mouse%20cursor%20to%20next%20midi%20note.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Trim left of item under mouse cursor (smart).lua" type="script" desc="Trim left of item under mouse cursor">
+      <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Editing/PA_Trim%20left%20of%20item%20under%20mouse%20cursor%20(smart).lua</source>
       </version>
     </reapack>
     <reapack name="PA_Trim left of item under mouse cursor.lua" type="script" desc="Trim left of item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/4b5206b8690c5e545070ab6fbd78d470eb919868/Editing/PA_Trim%20left%20of%20item%20under%20mouse%20cursor.lua</source>
-      </version>
-    </reapack>
-    <reapack name="PA_Trim right of item under mouse cursor (defer).lua" type="script" desc="Trim right of item under mouse cursor (defer)">
-      <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
-        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Editing/PA_Trim%20right%20of%20item%20under%20mouse%20cursor%20(defer).lua</source>
       </version>
     </reapack>
     <reapack name="PA_Trim right of item under mouse cursor.lua" type="script" desc="Trim right of item under mouse cursor">
@@ -187,6 +200,11 @@
     </reapack>
   </category>
   <category name="Midi">
+    <reapack name="PA_Copy midi in item.lua" type="script" desc="Copy all MIDI info from selected item and paste into a new item on the track below">
+      <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Midi/PA_Copy%20midi%20in%20item.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Trim note left.lua" type="script" desc="Trim left of MIDI note under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Midi/PA_Trim%20note%20left.lua</source>
