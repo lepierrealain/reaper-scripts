@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="6c54873237bb1e3b7796e0761a3af5e1e85485ef">
+<index version="1" name="Pierre-Alain Scripts" commit="a2d79bede85b2a3176e96ba0378a256fa96ced3e">
   <category name="Custom">
     <reapack name="PA_Add compressor.lua" type="script" desc="Add compressor on selected track (always add, never show existing)">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
@@ -203,6 +203,11 @@
     <reapack name="PA_Copy midi in item.lua" type="script" desc="Copy all MIDI info from selected item and paste into a new item on the track below">
       <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Midi/PA_Copy%20midi%20in%20item.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Move notes to cursor.lua" type="script" desc="Move selected MIDI notes so the first note starts at the mouse cursor (keeps pitches)">
+      <version name="1.0" author="lepierrealain" time="2026-07-01T15:26:57Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a2d79bede85b2a3176e96ba0378a256fa96ced3e/Midi/PA_Move%20notes%20to%20cursor.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Trim note left.lua" type="script" desc="Trim left of MIDI note under mouse cursor">
