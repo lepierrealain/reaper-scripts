@@ -117,6 +117,50 @@ local function SnapSelectedItems()
   local items_count = r.CountSelectedMediaItems(0)
   if items_count == 0 then return end
 
+  -- Suppression des items vides (aucun event MIDI enregistré) : on parcourt
+  -- à l'envers car on retire des items au fur et à mesure. On mémorise les
+  -- tracks touchées pour nettoyer ensuite leurs fixed lanes devenues vides.
+  local touched_tracks = {}
+  for i = items_count - 1, 0, -1 do
+    local item = r.GetSelectedMediaItem(0, i)
+    local take = r.GetActiveTake(item)
+    if not GetMidiContentBounds(item, take) then
+      local track = r.GetMediaItemTrack(item)
+      touched_tracks[track] = true
+      r.DeleteTrackMediaItem(track, item)
+    end
+  end
+
+  -- Si une track touchée est en mode fixed lanes, on supprime ses lanes
+  -- restées sans item (action native 42689 : « Track lanes: Delete lanes
+  -- with no media items »). L'action agit sur les tracks sélectionnées, on
+  -- isole donc chaque track concernée le temps de l'appel, puis on restaure
+  -- la sélection de tracks initiale.
+  local saved_tracks = {}
+  for t = 0, r.CountSelectedTracks(0) - 1 do
+    saved_tracks[#saved_tracks + 1] = r.GetSelectedTrack(0, t)
+  end
+
+  local cleaned_lanes = false
+  for track in pairs(touched_tracks) do
+    if r.GetMediaTrackInfo_Value(track, "I_NUMFIXEDLANES") > 1 then
+      r.Main_OnCommand(40297, 0)            -- Track: Unselect all tracks
+      r.SetTrackSelected(track, true)
+      r.Main_OnCommand(42689, 0)            -- Track lanes: Delete lanes with no media items
+      cleaned_lanes = true
+    end
+  end
+
+  if cleaned_lanes then
+    r.Main_OnCommand(40297, 0)              -- Track: Unselect all tracks
+    for _, tr in ipairs(saved_tracks) do
+      r.SetTrackSelected(tr, true)
+    end
+  end
+
+  items_count = r.CountSelectedMediaItems(0)
+  if items_count == 0 then return end
+
   for i = 0, items_count - 1 do
     local item = r.GetSelectedMediaItem(0, i)
     local take = r.GetActiveTake(item)

@@ -306,23 +306,58 @@ function PA_TrimItemLeft(item, new_pos)
     return item
   end
 
-  reaper.SetMediaItemInfo_Value(item, "D_POSITION", new_pos)
-  reaper.SetMediaItemInfo_Value(item, "D_LENGTH",   item_len + delta)
   if take then
+    -- Pour un item audio, on veut révéler/cacher du contenu source, pas le faire glisser.
+    -- En extension (delta > 0), on ne peut révéler du contenu que dans la limite de ce qui
+    -- existe avant le début actuel : le start offset ne peut pas descendre sous 0.
     local playrate   = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
     local start_offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
-    reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", start_offs - delta * playrate)
+    local new_offs   = start_offs - delta * playrate
+    if new_offs < 0 then
+      -- Pas assez de contenu source à gauche : on borne l'extension au contenu disponible.
+      new_pos = new_pos + (-new_offs) / playrate
+      new_offs = 0
+    end
+    reaper.SetMediaItemInfo_Value(item, "D_POSITION", new_pos)
+    reaper.SetMediaItemInfo_Value(item, "D_LENGTH",   item_start + item_len - new_pos)
+    reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", new_offs)
+  else
+    -- Item vide (sans take) : pas de contenu source, on étend/raccourcit librement.
+    reaper.SetMediaItemInfo_Value(item, "D_POSITION", new_pos)
+    reaper.SetMediaItemInfo_Value(item, "D_LENGTH",   item_len + delta)
   end
   return item
 end
 
 -- Trim le bord droit d'un item à new_end (modifie uniquement la longueur).
 -- Pour les items MIDI en extension (new_end après la fin actuelle), étend aussi la source.
+-- Pour un item audio non-loopé en extension, on borne new_end à la fin réelle de la
+-- source : on ne peut révéler du contenu que dans la limite de ce qui existe après le
+-- start offset (symétrique au bornage gauche de PA_TrimItemLeft).
 function PA_TrimItemRight(item, new_end)
   local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
   local item_end   = item_start + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-  reaper.SetMediaItemInfo_Value(item, "D_LENGTH", new_end - item_start)
   local take = reaper.GetActiveTake(item)
+
+  if take and not reaper.TakeIsMIDI(take) and new_end > item_end then
+    -- Item audio en extension : ne pas dépasser la fin de la source (sauf si loopé).
+    local loop_src = reaper.GetMediaItemInfo_Value(item, "B_LOOPSRC") == 1
+    if not loop_src then
+      local source = reaper.GetMediaItemTake_Source(take)
+      if source then
+        local src_len, is_qn = reaper.GetMediaSourceLength(source)
+        if src_len and src_len > 0 and not is_qn then
+          local playrate   = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+          local start_offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+          -- Fin projet maximale : contenu restant après le start offset, ajusté au playrate.
+          local max_end = item_start + (src_len - start_offs) / playrate
+          if new_end > max_end then new_end = max_end end
+        end
+      end
+    end
+  end
+
+  reaper.SetMediaItemInfo_Value(item, "D_LENGTH", new_end - item_start)
   if take and reaper.TakeIsMIDI(take) and new_end > item_end then
     local target_ppq = reaper.MIDI_GetPPQPosFromProjTime(take, new_end)
     reaper.MIDI_InsertNote(take, false, true, target_ppq - 1, target_ppq, 0, 0, 1, true)
