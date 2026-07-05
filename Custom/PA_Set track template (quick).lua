@@ -13,14 +13,25 @@ local function main()
   if not track then return end
 
   local current_input = reaper.GetMediaTrackInfo_Value(track, "I_RECINPUT")
+  local armed = reaper.GetMediaTrackInfo_Value(track, "I_RECARM") == 1
+  local has_instrument = reaper.TrackFX_GetInstrument(track) >= 0
 
+  -- Cycle : MIDI → Input armé → Input désarmé → MIDI
+  -- Sans instrument (VSTi/CLAPi), on ne passe jamais en MIDI.
+  -- L'input audio en cours est conservé (Input 1 par défaut).
   reaper.Undo_BeginBlock()
   if current_input == MIDI_INPUT_ALL then
-    PA_SetTrackTemplateToInput(1)
-    reaper.Undo_EndBlock("Set track template: Input 1", -1)
-  else
+    PA_SetTrackTemplateToInput()
+    reaper.Undo_EndBlock("Set track template: Input", -1)
+  elseif armed then
+    PA_SetTrackTemplateToInputIdle()
+    reaper.Undo_EndBlock("Set track template: Input (idle)", -1)
+  elseif has_instrument then
     PA_SetTrackTemplateToMidi()
     reaper.Undo_EndBlock("Set track template: MIDI", -1)
+  else
+    PA_SetTrackTemplateToInput()
+    reaper.Undo_EndBlock("Set track template: Input", -1)
   end
   reaper.UpdateArrange()
 end
