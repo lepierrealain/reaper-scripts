@@ -1,6 +1,6 @@
 -- @description Add plugin to selected track (searchable list)
 -- @author lepierrealain
--- @version 1.7
+-- @version 1.8
 -- @provides [main] .
 -- @requires js_ReaScriptAPI, ReaImGui
 
@@ -309,6 +309,64 @@ local function addPlugin(plugin_name)
     return false
   end
   return true
+end
+
+-- Alt+Enter: add to the active take of every selected item
+local function addPluginToItems(plugin_name)
+  local n = reaper.CountSelectedMediaItems(0)
+  if n == 0 then
+    reaper.ShowMessageBox("No item selected.", "Add Plugin", 0)
+    return false
+  end
+  if n > 1 then
+    local ret = reaper.ShowMessageBox(
+      n .. " items sélectionnés.\nAjouter « " .. plugin_name .. " » à tous ?",
+      "Add Plugin", 4)
+    if ret ~= 6 then return false end
+  end
+  reaper.Undo_BeginBlock()
+  local added = false
+  for i = 0, n - 1 do
+    local take = reaper.GetActiveTake(reaper.GetSelectedMediaItem(0, i))
+    if take and reaper.TakeFX_AddByName(take, plugin_name, -1) >= 0 then
+      added = true
+    end
+  end
+  reaper.Undo_EndBlock("Add plugin to items: " .. plugin_name, -1)
+  if not added then
+    reaper.ShowMessageBox("Failed to add plugin:\n" .. plugin_name, "Add Plugin", 0)
+    return false
+  end
+  reaper.UpdateArrange()
+  return true
+end
+
+-- Shift+Enter: add to the selected track's input FX chain
+local function addPluginToInputFX(plugin_name)
+  local track = reaper.GetSelectedTrack(0, 0)
+  if not track then
+    reaper.ShowMessageBox("No track selected.", "Add Plugin", 0)
+    return false
+  end
+  reaper.Undo_BeginBlock()
+  local fx_idx = reaper.TrackFX_AddByName(track, plugin_name, true, -1)
+  reaper.Undo_EndBlock("Add plugin to input FX: " .. plugin_name, -1)
+  if fx_idx < 0 then
+    reaper.ShowMessageBox("Failed to add plugin:\n" .. plugin_name, "Add Plugin", 0)
+    return false
+  end
+  return true
+end
+
+-- Dispatch on the modifiers held at the moment of the Enter press / click
+local function addPluginWithMods(plugin_name)
+  local mods = reaper.ImGui_GetKeyMods(ctx)
+  if mods & reaper.ImGui_Mod_Alt() ~= 0 then
+    return addPluginToItems(plugin_name)
+  elseif mods & reaper.ImGui_Mod_Shift() ~= 0 then
+    return addPluginToInputFX(plugin_name)
+  end
+  return addPlugin(plugin_name)
 end
 
 -- ─── Theme (shared palette from PA_lib_gui) ─────────────────────────────
