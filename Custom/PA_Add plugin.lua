@@ -588,7 +588,7 @@ local function loop()
       scroll_to_selected = true
     elseif reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter()) or
            reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter()) then
-      if filtered[selected_idx] and addPlugin(filtered[selected_idx]) then
+      if filtered[selected_idx] and addPluginWithMods(filtered[selected_idx]) then
         open = false
       end
     end
@@ -672,7 +672,7 @@ local function loop()
         local sel_flags = is_fav and reaper.ImGui_SelectableFlags_AllowOverlap()
                                   or reaper.ImGui_SelectableFlags_None()
         if reaper.ImGui_Selectable(ctx, "##sel" .. i, is_sel, sel_flags, avail, 0) then
-          if addPlugin(name) then open = false end
+          if addPluginWithMods(name) then open = false end
         end
         reaper.ImGui_PopStyleColor(ctx, 3)
 
