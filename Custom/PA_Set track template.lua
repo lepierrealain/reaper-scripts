@@ -1,6 +1,6 @@
 -- @description Set track record template (MIDI / audio inputs)
 -- @author lepierrealain
--- @version 1.5
+-- @version 1.6
 -- @provides [main] .
 -- @requires js_ReaScriptAPI, ReaImGui
 
@@ -87,6 +87,7 @@ local LABEL_GAP         = 24  -- espace entre le libellé et le premier bouton
 local BTN_PAD           = 6   -- frame padding vertical réduit (boutons moins hauts)
 local BTN_MARGIN        = 26  -- marge ajoutée au texte pour la largeur d'un bouton
 local ROW_H             = 38  -- frame 30 (police 18 + 2 × BTN_PAD) + item spacing 8
+local SET_ROW_H         = 36  -- checkbox réduite PA_GuiCheckbox (18 + 2 × 5) + item spacing 8
 local MAX_SETTINGS_ROWS = 10  -- au-delà : scroll dans la fenêtre
 
 local win_init      = true
@@ -96,7 +97,7 @@ local resize_h      = nil  -- hauteur (non scalée) à appliquer à la prochaine
 
 local function windowHeight()
   if settings_open then
-    return (1 + math.min(#input_options, MAX_SETTINGS_ROWS)) * ROW_H + 35
+    return ROW_H + math.min(#input_options, MAX_SETTINGS_ROWS) * SET_ROW_H + 35
   end
   return #templates * ROW_H + 35
 end
@@ -153,7 +154,7 @@ local function loop()
         if opt.desc and opt.desc ~= "" and opt.desc ~= " / " then
           label = label .. "  —  " .. opt.desc
         end
-        local changed, checked = reaper.ImGui_Checkbox(ctx,
+        local changed, checked = PA_GuiCheckbox(
           label .. "##opt" .. opt.recinput, enabled[opt.recinput] or false)
         if changed then
           enabled[opt.recinput] = checked or nil

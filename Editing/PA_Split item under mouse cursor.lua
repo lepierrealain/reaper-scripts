@@ -25,6 +25,7 @@ local function main()
   end
 
   reaper.Undo_BeginBlock()
+  reaper.SelectAllMediaItems(0, false)
   reaper.SplitMediaItem(item, split_time)
   for _, ti in ipairs(targets) do
     reaper.SplitMediaItem(ti, split_time)

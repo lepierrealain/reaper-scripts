@@ -1,14 +1,14 @@
 -- @description Auto colorize tracks: settings window
 -- @author lepierrealain
--- @version 1.0
+-- @version 1.3
 -- @requires ReaImGui
 -- @about
---   Fenêtre de réglages du colorisateur automatique de pistes :
---   palette (ajout, suppression, édition, réordonnancement par glisser-déposer),
---   attribution en boucle ou aléatoire stable, préservation des couleurs
---   utilisateur, déclinaison des enfants (saturation/luminosité, niveau
---   d'héritage, dégradé cumulatif). Les changements s'appliquent en direct
---   (option) et réveillent le watcher "PA_Auto colorize tracks" s'il tourne.
+--   Settings window for the automatic track colorizer:
+--   palette (add, remove, edit, drag-and-drop reordering), loop or stable
+--   random assignment, user color preservation, child track shading
+--   (saturation/lightness, inheritance level, cumulative shading, same
+--   color for consecutive childless tracks). Changes apply live (option)
+--   and wake the "PA_Auto colorize tracks" watcher if it is running.
 
 local lib_path = ({ reaper.get_action_context() })[2]:match("^(.+[\\/])")
 local lib_root = lib_path .. ".." .. package.config:sub(1, 1) .. "Libraries" .. package.config:sub(1, 1)
@@ -16,15 +16,15 @@ dofile(lib_root .. "PA_lib_color.lua")
 dofile(lib_root .. "PA_lib_gui.lua")
 
 if not reaper.ImGui_CreateContext then
-  reaper.ShowMessageBox("Cette fenêtre nécessite l'extension ReaImGui (ReaPack).",
-    "Auto colorize — réglages", 0)
+  reaper.ShowMessageBox("This window requires the ReaImGui extension (ReaPack).",
+    "Auto colorize — settings", 0)
   return
 end
 
 local ctx = PA_GuiInit("PA_AutoColorizeSettings")
 local S = PA_S
 
-local WIN_W, WIN_H = 420, 760
+local WIN_W, WIN_H = 420, 785
 
 local s = PA_ColorLoadSettings()
 local win_init = true
@@ -54,16 +54,7 @@ local function rememberWinSize()
   end
 end
 
--- SeparatorText n'existe que dans les ReaImGui récents
-local function section(label)
-  if reaper.ImGui_SeparatorText then
-    reaper.ImGui_SeparatorText(ctx, label)
-  else
-    reaper.ImGui_Spacing(ctx)
-    reaper.ImGui_Text(ctx, label)
-    reaper.ImGui_Separator(ctx)
-  end
-end
+local section = PA_GuiSection
 
 local function rgba(rgb) return (rgb << 8) | 0xFF end
 
@@ -95,7 +86,7 @@ local function drawPalette()
   -- La liste s'étire avec la fenêtre : tout l'espace restant moins la place
   -- (approximative, hors échelle) qu'occupent les sections en dessous.
   local _, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
-  local list_h = math.max(S(90), avail_h - S(626))
+  local list_h = math.max(S(90), avail_h - S(651))
   if reaper.ImGui_BeginChild(ctx, "##palette", 0, list_h) then
     local swatch_flags = reaper.ImGui_ColorEditFlags_NoInputs()
                        | reaper.ImGui_ColorEditFlags_NoDragDrop()
@@ -165,13 +156,13 @@ local function drawPalette()
     changed = true
   end
 
-  if reaper.ImGui_Button(ctx, "+ Ajouter") then
+  if reaper.ImGui_Button(ctx, "+ Add") then
     s.palette[#s.palette + 1] = s.palette[#s.palette] or 0x5B8CFF
     changed = true
   end
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, "Palette par défaut") then
-    reaper.ImGui_OpenPopup(ctx, "Palette par défaut ?")
+  if reaper.ImGui_Button(ctx, "Default palette") then
+    reaper.ImGui_OpenPopup(ctx, "Default palette?")
   end
 
   -- Confirmation : le reset écrase la palette personnalisée
@@ -180,19 +171,19 @@ local function drawPalette()
   local sw, sh = reaper.ImGui_Viewport_GetWorkSize(vp)
   reaper.ImGui_SetNextWindowPos(ctx, vx + sw * 0.5, vy + sh * 0.5,
     reaper.ImGui_Cond_Appearing(), 0.5, 0.5)
-  if reaper.ImGui_BeginPopupModal(ctx, "Palette par défaut ?", nil,
+  if reaper.ImGui_BeginPopupModal(ctx, "Default palette?", nil,
     reaper.ImGui_WindowFlags_AlwaysAutoResize()) then
-    reaper.ImGui_Text(ctx, "Remplacer la palette actuelle par la palette par défaut ?")
-    reaper.ImGui_TextDisabled(ctx, "Les couleurs personnalisées seront perdues.")
+    reaper.ImGui_Text(ctx, "Replace the current palette with the default one?")
+    reaper.ImGui_TextDisabled(ctx, "Custom colors will be lost.")
     reaper.ImGui_Spacing(ctx)
-    if reaper.ImGui_Button(ctx, "Remplacer") then
+    if reaper.ImGui_Button(ctx, "Replace") then
       s.palette = PA_ColorDefaultPalette()
       pal_uids = {}
       changed = true
       reaper.ImGui_CloseCurrentPopup(ctx)
     end
     reaper.ImGui_SameLine(ctx)
-    if reaper.ImGui_Button(ctx, "Annuler") then
+    if reaper.ImGui_Button(ctx, "Cancel") then
       reaper.ImGui_CloseCurrentPopup(ctx)
     end
     reaper.ImGui_EndPopup(ctx)
@@ -207,55 +198,64 @@ local function drawUI()
   local changed = false
 
   section("Palette")
-  reaper.ImGui_TextDisabled(ctx, "Clic : éditer — poignée à droite : réordonner")
+  reaper.ImGui_TextDisabled(ctx, "Click: edit — handle on the right: reorder")
   changed = drawPalette() or changed
 
-  section("Attribution")
-  if reaper.ImGui_RadioButton(ctx, "Boucle", s.mode == "loop") and s.mode ~= "loop" then
+  section("Assignment")
+  if PA_GuiRadioButton("Loop", s.mode == "loop") and s.mode ~= "loop" then
     s.mode = "loop"; changed = true
   end
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_RadioButton(ctx, "Aléatoire", s.mode == "random") and s.mode ~= "random" then
+  if PA_GuiRadioButton("Random", s.mode == "random") and s.mode ~= "random" then
     s.mode = "random"; changed = true
   end
   if s.mode == "random" then
     reaper.ImGui_SameLine(ctx)
-    if reaper.ImGui_Button(ctx, "Re-tirer") then
+    -- même hauteur que les radios de la ligne
+    reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(), S(12), S(5))
+    if reaper.ImGui_Button(ctx, "Reroll") then
       s.seed = s.seed + 1  -- l'aléatoire est stable par piste : seul le seed re-tire
       changed = true
     end
+    reaper.ImGui_PopStyleVar(ctx)
   end
 
   local rv
-  rv, s.preserve = reaper.ImGui_Checkbox(ctx, "Préserver les couleurs de l'utilisateur", s.preserve)
+  rv, s.preserve = PA_GuiCheckbox("Preserve user colors", s.preserve)
   changed = rv or changed
-  reaper.ImGui_TextDisabled(ctx, "Ne colorise que les pistes en couleur par défaut,")
-  reaper.ImGui_TextDisabled(ctx, "ou déjà colorisées par le script et pas retouchées.")
+  reaper.ImGui_TextDisabled(ctx, "Only colors tracks that use the default color,")
+  reaper.ImGui_TextDisabled(ctx, "or already colored by the script and untouched since.")
 
-  section("Pistes enfants")
+  rv, s.childless_same = PA_GuiCheckbox(
+    "Same color for consecutive childless tracks", s.childless_same)
+  changed = rv or changed
+  reaper.ImGui_TextDisabled(ctx, "Consecutive tracks with no children share their color;")
+  reaper.ImGui_TextDisabled(ctx, "a folder always starts a new color.")
+
+  section("Child tracks")
   local v
   reaper.ImGui_SetNextItemWidth(ctx, S(180))
-  rv, v = reaper.ImGui_SliderInt(ctx, "Héritage dès le niveau", math.floor(s.child_depth), 1, 8)
+  rv, v = reaper.ImGui_SliderInt(ctx, "Inherit from level", math.floor(s.child_depth), 1, 8)
   if rv then s.child_depth = v; changed = true end
-  reaper.ImGui_TextDisabled(ctx, "1 : les enfants directs héritent déjà du parent.")
-  reaper.ImGui_TextDisabled(ctx, "Au-dessus, seuls les dossiers prennent leur propre couleur.")
+  reaper.ImGui_TextDisabled(ctx, "1: direct children already inherit from their parent.")
+  reaper.ImGui_TextDisabled(ctx, "Above, only folders take their own color.")
 
   reaper.ImGui_SetNextItemWidth(ctx, S(180))
-  rv, v = reaper.ImGui_SliderInt(ctx, "Saturation enfants",
+  rv, v = reaper.ImGui_SliderInt(ctx, "Children saturation",
     math.floor(s.child_sat * 100 + 0.5), 20, 200, "%d %%")
   if rv then s.child_sat = v / 100; changed = true end
 
   reaper.ImGui_SetNextItemWidth(ctx, S(180))
-  rv, v = reaper.ImGui_SliderInt(ctx, "Luminosité enfants",
+  rv, v = reaper.ImGui_SliderInt(ctx, "Children lightness",
     math.floor(s.child_lum * 100 + 0.5), 20, 200, "%d %%")
   if rv then s.child_lum = v / 100; changed = true end
 
-  rv, s.cumulative = reaper.ImGui_Checkbox(ctx, "Dégradé cumulatif par niveau", s.cumulative)
+  rv, s.cumulative = PA_GuiCheckbox("Cumulative shading per level", s.cumulative)
   changed = rv or changed
 
   -- Aperçu : parent puis trois niveaux d'enfants avec les réglages courants
   if s.palette[1] then
-    reaper.ImGui_Text(ctx, "Aperçu")
+    reaper.ImGui_Text(ctx, "Preview")
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_ColorButton(ctx, "##pv0", rgba(s.palette[1]),
       reaper.ImGui_ColorEditFlags_NoTooltip())
@@ -268,16 +268,16 @@ local function drawUI()
     end
   end
 
-  section("Application")
-  rv, s.live = reaper.ImGui_Checkbox(ctx, "Appliquer en direct", s.live)
+  section("Apply")
+  rv, s.live = PA_GuiCheckbox("Apply live", s.live)
   changed = rv or changed
 
-  if reaper.ImGui_Button(ctx, "Appliquer") then
+  if reaper.ImGui_Button(ctx, "Apply") then
     PA_ColorSaveSettings(s)
     PA_ColorizeApply(s, false)
   end
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, "Tout recoloriser") then
+  if reaper.ImGui_Button(ctx, "Recolor all") then
     PA_ColorSaveSettings(s)
     PA_ColorizeApply(s, true)  -- ignore "préserver" pour cette passe
   end
@@ -304,7 +304,7 @@ local function loop()
   end
   reaper.ImGui_SetNextWindowSizeConstraints(ctx, S(340), S(420), 16384, 16384)
 
-  local visible, open = reaper.ImGui_Begin(ctx, "Auto colorize — réglages", true,
+  local visible, open = reaper.ImGui_Begin(ctx, "Auto colorize — settings", true,
     reaper.ImGui_WindowFlags_NoCollapse())
   if visible then
     rememberWinSize()

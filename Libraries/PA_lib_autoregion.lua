@@ -1,6 +1,6 @@
 -- @description Auto region from items: état partagé + logique snapshot/diff
 -- @author lepierrealain
--- @version 1.0
+-- @version 1.1
 
 -- Librairie partagée entre "PA_Auto region from items" (watcher defer) et sa
 -- fenêtre de réglages. L'état vit dans le ProjExtState "AutoRegions" du projet
@@ -14,15 +14,17 @@ local EXT_MAP    = "map"
 local EXT_TITLE  = "title"
 local EXT_CFG    = "cfg"     -- par piste : tguid[|nom_custom]  (mode/padding/sep → niveau projet)
 local EXT_MODE   = "mode"    -- projet : mode|padding|sep
+local EXT_GROUP  = "group"   -- projet : nom de base du mode Item group
 
 local STAMP_NS   = "PA_AutoRegions"  -- ext state global (stamp non persisté)
 
--- mode : 0=Item name  1=Numbering  2=Single
+-- mode : 0=Item name  1=Numbering  2=Single  3=Item group
 -- (valeurs figées : elles sont persistées en ExtState ; l'ordre d'affichage
 --  du combo des réglages est géré séparément côté fenêtre)
 PA_AR_MODE_ITEM   = 0
 PA_AR_MODE_NUM    = 1
 PA_AR_MODE_SINGLE = 2
+PA_AR_MODE_GROUP  = 3
 
 -- ─── Utilitaires ────────────────────────────────────────────────────────
 
@@ -34,9 +36,27 @@ local function split(str, sep)
   return result
 end
 
+-- Extensions média connues : retirées du nom d'item (beaucoup d'items
+-- s'appellent "prise.wav" ou "clip.mp4"). On ne touche qu'à ces extensions
+-- pour ne jamais tronquer un nom qui contient un point sans être un fichier.
+local MEDIA_EXTS = {
+  wav = true, aif = true, aiff = true, flac = true, mp3 = true, ogg = true,
+  opus = true, m4a = true, aac = true, wv = true, ape = true, wma = true,
+  mp4 = true, mov = true, mkv = true, avi = true, webm = true, m4v = true,
+  midi = true, mid = true, rex = true, rx2 = true, w64 = true, caf = true,
+}
+
+local function stripMediaExt(name)
+  local base, ext = name:match("^(.*)%.([%w]+)$")
+  if base and base ~= "" and MEDIA_EXTS[ext:lower()] then
+    return base
+  end
+  return name
+end
+
 local function itemName(item)
   local take = reaper.GetActiveTake(item)
-  if take then return reaper.GetTakeName(take) end
+  if take then return stripMediaExt(reaper.GetTakeName(take)) end
   return "Item"
 end
 
@@ -113,6 +133,7 @@ function PA_AR_SaveState(state)
   reaper.SetProjExtState(0, EXT_NS, EXT_CFG,    encodeCfg(state.cfg))
   reaper.SetProjExtState(0, EXT_NS, EXT_MODE,
     tostring(state.mode or PA_AR_MODE_SINGLE) .. "|" .. tostring(state.padding or 1) .. "|" .. (state.sep or "_"))
+  reaper.SetProjExtState(0, EXT_NS, EXT_GROUP, state.group or "")
 
   -- MAP : iguid:ridx pour les modes normaux ; tguid:ridx pour single mode (préfixe "T:")
   local parts = {}
@@ -138,6 +159,7 @@ function PA_AR_LoadState()
     mode    = PA_AR_MODE_SINGLE,
     padding = 1,
     sep     = "_",
+    group   = "",   -- nom de base du mode Item group
   }
 
   local _, tracks_str = reaper.GetProjExtState(0, EXT_NS, EXT_TRACKS)
@@ -168,6 +190,9 @@ function PA_AR_LoadState()
 
   local _, t = reaper.GetProjExtState(0, EXT_NS, EXT_TITLE)
   if t and t ~= "" then state.title = t end
+
+  local _, g = reaper.GetProjExtState(0, EXT_NS, EXT_GROUP)
+  if g and g ~= "" then state.group = g end
 
   local _, mode_str = reaper.GetProjExtState(0, EXT_NS, EXT_MODE)
   if mode_str and mode_str ~= "" then
@@ -206,6 +231,12 @@ function PA_AR_BuildSnapshot(state)
   local has_title   = state.title and state.title ~= ""
   local sep         = (state.sep and state.sep ~= "") and state.sep or "_"
 
+  -- Mode Item group : le regroupement est GLOBAL (tous les items de toutes
+  -- les pistes surveillées partageant le même group ID REAPER forment un seul
+  -- groupe → une seule région). On accumule ici pendant la boucle par piste,
+  -- puis on construit les régions une fois après la boucle.
+  local groups = {}   -- gid → { gid, min_pos, max_end }
+
   local num_tracks = reaper.CountTracks(0)
   for t = 0, num_tracks - 1 do
     local track = reaper.GetTrack(0, t)
@@ -219,10 +250,11 @@ function PA_AR_BuildSnapshot(state)
     for i = 0, reaper.GetTrackNumMediaItems(track) - 1 do
       local item = reaper.GetTrackMediaItem(track, i)
       items[#items + 1] = {
-        guid = reaper.BR_GetMediaItemGUID(item),
-        pos  = reaper.GetMediaItemInfo_Value(item, "D_POSITION"),
-        len  = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
-        name = itemName(item),
+        guid  = reaper.BR_GetMediaItemGUID(item),
+        pos   = reaper.GetMediaItemInfo_Value(item, "D_POSITION"),
+        len   = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
+        name  = itemName(item),
+        group = reaper.GetMediaItemInfo_Value(item, "I_GROUPID"),
       }
     end
 
@@ -258,9 +290,62 @@ function PA_AR_BuildSnapshot(state)
         local first = items[1]
         single_snap[tguid] = { pos = first.pos, len = first.len, name = make_name(nil) }
       end
+
+    elseif state.mode == PA_AR_MODE_GROUP then
+      -- Accumule les items groupés (I_GROUPID ≠ 0) de cette piste dans le
+      -- regroupement global ; les items non groupés sont ignorés. La
+      -- construction des régions a lieu après la boucle (voir plus bas).
+      for _, item in ipairs(items) do
+        local gid = math.floor((item.group or 0) + 0.5)  -- I_GROUPID peut être un float
+        if gid ~= 0 then
+          local g = groups[gid]
+          local item_end = item.pos + item.len
+          if not g then
+            groups[gid] = { gid = gid, min_pos = item.pos, max_end = item_end }
+          else
+            if item.pos  < g.min_pos then g.min_pos = item.pos end
+            if item_end  > g.max_end then g.max_end = item_end end
+          end
+        end
+      end
     end
 
     ::continue::
+  end
+
+  -- Mode Item group : chaque group ID (fusionné sur toutes les pistes) donne
+  -- une région du 1er au dernier item, numérotée par ordre chronologique
+  -- (position du début du groupe). Le composant "nom" est le nom de base
+  -- dédié (state.group).
+  if state.mode == PA_AR_MODE_GROUP then
+    local ordered = {}
+    for _, g in pairs(groups) do ordered[#ordered + 1] = g end
+    table.sort(ordered, function(a, b)
+      if a.min_pos ~= b.min_pos then return a.min_pos < b.min_pos end
+      return a.gid < b.gid
+    end)
+
+    local group_name = (state.group and state.group ~= "") and state.group or nil
+
+    local count   = #ordered
+    local padding = state.padding or 1
+    local needed  = #tostring(count)
+    if needed > padding then padding = needed end
+
+    for idx, g in ipairs(ordered) do
+      -- Clé synthétique stable, indépendante des items : la région suit le
+      -- group ID global. Préfixe "G:" (distinct de "T:" du single mode).
+      local key = "G:" .. tostring(g.gid)
+      local p = {}
+      if has_title  then p[#p + 1] = state.title end
+      if group_name then p[#p + 1] = group_name end
+      p[#p + 1] = formatNum(idx, padding)
+      snapshot[key] = {
+        pos  = g.min_pos,
+        len  = g.max_end - g.min_pos,
+        name = table.concat(p, sep),
+      }
+    end
   end
 
   return snapshot, single_snap

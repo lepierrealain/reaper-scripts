@@ -1,6 +1,6 @@
 -- @description Auto colorize: réglages partagés + logique de colorisation des pistes
 -- @author lepierrealain
--- @version 1.0
+-- @version 1.2
 
 -- Librairie partagée entre "PA_Auto colorize tracks" (watcher) et sa fenêtre
 -- de réglages. Les réglages vivent dans la section PA_AutoColorize de
@@ -46,6 +46,7 @@ function PA_ColorLoadSettings()
   s.child_sat   = tonumber(reaper.GetExtState(EXT, "child_sat")) or 0.70
   s.child_lum   = tonumber(reaper.GetExtState(EXT, "child_lum")) or 1.15
   s.cumulative  = reaper.GetExtState(EXT, "cumulative") == "1"
+  s.childless_same = reaper.GetExtState(EXT, "childless_same") == "1"
   s.seed        = tonumber(reaper.GetExtState(EXT, "seed")) or 0
   s.live        = reaper.GetExtState(EXT, "live") ~= "0"
   return s
@@ -61,6 +62,7 @@ function PA_ColorSaveSettings(s)
   reaper.SetExtState(EXT, "child_sat", tostring(s.child_sat), true)
   reaper.SetExtState(EXT, "child_lum", tostring(s.child_lum), true)
   reaper.SetExtState(EXT, "cumulative", s.cumulative and "1" or "0", true)
+  reaper.SetExtState(EXT, "childless_same", s.childless_same and "1" or "0", true)
   reaper.SetExtState(EXT, "seed", tostring(s.seed), true)
   reaper.SetExtState(EXT, "live", s.live and "1" or "0", true)
   -- Horodatage non persisté : réveille le watcher pour qu'il recharge/réapplique
@@ -164,8 +166,12 @@ end
 
 -- Applique la palette à toutes les pistes du projet selon les réglages `s`.
 -- force = true : ignore l'option "préserver" et recolorise tout.
+-- force_guids : ensemble tguid → true de pistes à coloriser même si
+-- "préserver" les bloquerait (pistes nouvellement créées : REAPER peut les
+-- faire naître avec une couleur custom, qui passerait pour un choix de
+-- l'utilisateur).
 -- Retourne le nombre de pistes modifiées.
-function PA_ColorizeApply(s, force)
+function PA_ColorizeApply(s, force, force_guids)
   if #s.palette == 0 then return 0 end
   local N = math.max(1, math.floor(s.child_depth))
 
@@ -173,21 +179,34 @@ function PA_ColorizeApply(s, force)
   local plan = {}
   local counter, last_idx = 0, nil
 
+  -- Dernière piste à couleur propre : couleur posée et absence d'enfants
+  -- (option "même couleur entre pistes sans enfant").
+  local prev_own_rgb, prev_own_childless = nil, false
+
   -- Choix d'une couleur "propre" (piste au-dessus du niveau d'héritage).
   -- Le compteur avance même pour les pistes préservées : l'attribution
   -- reste stable quand on active/désactive l'option.
-  local function pickOwn(track)
-    local idx
-    if s.mode == "random" then
-      idx = hashString(reaper.GetTrackGUID(track) .. "#" .. s.seed) % #s.palette + 1
-      if idx == last_idx and #s.palette > 1 then
-        idx = idx % #s.palette + 1  -- évite deux pistes voisines identiques
-      end
+  local function pickOwn(track, has_children)
+    local rgb
+    -- Deux pistes sans enfant qui se suivent : même couleur. Un dossier
+    -- repart toujours sur une nouvelle couleur.
+    if s.childless_same and prev_own_childless and not has_children then
+      rgb = prev_own_rgb
     else
-      idx = counter % #s.palette + 1
+      local idx
+      if s.mode == "random" then
+        idx = hashString(reaper.GetTrackGUID(track) .. "#" .. s.seed) % #s.palette + 1
+        if idx == last_idx and #s.palette > 1 then
+          idx = idx % #s.palette + 1  -- évite deux pistes voisines identiques
+        end
+      else
+        idx = counter % #s.palette + 1
+      end
+      counter, last_idx = counter + 1, idx
+      rgb = s.palette[idx]
     end
-    counter, last_idx = counter + 1, idx
-    return s.palette[idx]
+    prev_own_rgb, prev_own_childless = rgb, not has_children
+    return rgb
   end
 
   for i = 0, reaper.CountTracks(0) - 1 do
@@ -202,7 +221,7 @@ function PA_ColorizeApply(s, force)
     -- le niveau 2", un dossier de niveau 0 sans sous-dossiers garde ainsi
     -- toutes ses pistes déclinées sur sa couleur.
     if depth < N and (depth == 0 or is_folder) then
-      rgb = pickOwn(track)
+      rgb = pickOwn(track, is_folder)
     else
       -- Ancêtre le plus proche à un niveau "couleur propre" (≤ N-1)
       local anc = reaper.GetParentTrack(track)
@@ -217,11 +236,15 @@ function PA_ColorizeApply(s, force)
         end
         rgb = PA_ColorChildShade(base, levels, s.child_sat, s.child_lum)
       else
-        rgb = pickOwn(track)  -- parent sans couleur : couleur propre
+        rgb = pickOwn(track, is_folder)  -- parent sans couleur : couleur propre
       end
     end
 
-    if mayColor(track, s, force) then
+    local track_force = force
+    if not track_force and force_guids then
+      track_force = force_guids[reaper.GetTrackGUID(track)] or false
+    end
+    if mayColor(track, s, track_force) then
       assigned[track] = rgb
       local native = toNative(rgb)
       if math.floor(reaper.GetMediaTrackInfo_Value(track, "I_CUSTOMCOLOR")) ~= native then
@@ -234,14 +257,12 @@ function PA_ColorizeApply(s, force)
   end
 
   if #plan > 0 then
-    reaper.Undo_BeginBlock()
     reaper.PreventUIRefresh(1)
     for _, p in ipairs(plan) do
       reaper.SetMediaTrackInfo_Value(p.track, "I_CUSTOMCOLOR", p.native)
       reaper.GetSetMediaTrackInfo_String(p.track, OWN_KEY, tostring(p.native), true)
     end
     reaper.PreventUIRefresh(-1)
-    reaper.Undo_EndBlock("Auto colorize tracks", -1)
     reaper.TrackList_AdjustWindows(false)
     reaper.UpdateArrange()
   end

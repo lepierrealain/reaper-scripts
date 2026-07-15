@@ -1,6 +1,6 @@
 -- @description Add plugin to selected track (searchable list)
 -- @author lepierrealain
--- @version 1.8
+-- @version 1.9
 -- @provides [main] .
 -- @requires js_ReaScriptAPI, ReaImGui
 
@@ -469,50 +469,60 @@ local function drawSettingsWindow()
   local sw, sh = reaper.ImGui_Viewport_GetWorkSize(vp)
   reaper.ImGui_SetNextWindowPos(ctx, vx + sw * 0.5, vy + sh * 0.5,
     reaper.ImGui_Cond_Appearing(), 0.5, 0.5)
+  -- Largeur fixe, hauteur automatique : les lignes s'alignent en colonnes
+  -- au lieu de faire varier la largeur à chaque édition
+  reaper.ImGui_SetNextWindowSizeConstraints(ctx, S(430), 0, S(430), 16384)
   local s_visible, s_open = reaper.ImGui_Begin(ctx, "Paramètres", true,
     reaper.ImGui_WindowFlags_NoCollapse() | reaper.ImGui_WindowFlags_AlwaysAutoResize())
   if not s_open then show_settings = false end
   if not s_visible then PA_GuiEndCompact() return end
 
-  reaper.ImGui_SeparatorText(ctx, "Interface")
+  PA_GuiSection("Interface")
   reaper.ImGui_Text(ctx, "Taille de l'interface")
   reaper.ImGui_SameLine(ctx)
   if PA_GuiScaleCombo() then scale_dirty = true end
 
-  reaper.ImGui_SeparatorText(ctx, "Catégories")
+  PA_GuiSection("Catégories")
   if #TAGS == 0 then
     reaper.ImGui_TextDisabled(ctx, "Aucune catégorie — créez-en une ci-dessous.")
   end
   local to_remove
+  local btn_sz    = reaper.ImGui_GetFrameHeight(ctx)
+  local win_w     = reaper.ImGui_GetWindowWidth(ctx)
+  local actions_x = win_w - S(16) - btn_sz * 2 - S(6)  -- 2 boutons alignés à droite
   for idx, t in ipairs(TAGS) do
+    reaper.ImGui_PushID(ctx, idx)
     if edit_idx == idx then
       local _
       reaper.ImGui_SetNextItemWidth(ctx, S(150))
-      _, edit_name_buf = reaper.ImGui_InputTextWithHint(ctx, "##editname" .. idx, "Nom", edit_name_buf)
+      _, edit_name_buf = reaper.ImGui_InputTextWithHint(ctx, "##editname", "Nom", edit_name_buf)
       reaper.ImGui_SameLine(ctx)
       reaper.ImGui_SetNextItemWidth(ctx, S(60))
-      _, edit_prefix_buf = reaper.ImGui_InputTextWithHint(ctx, "##editprefix" .. idx, "/x", edit_prefix_buf)
+      _, edit_prefix_buf = reaper.ImGui_InputTextWithHint(ctx, "##editprefix", "/x", edit_prefix_buf)
       reaper.ImGui_SameLine(ctx)
-      if reaper.ImGui_Button(ctx, "OK##editok" .. idx) then
+      if reaper.ImGui_Button(ctx, "OK##editok") then
         edit_error = editCategory(idx, edit_name_buf, edit_prefix_buf)
         if not edit_error then edit_idx = nil end
       end
       reaper.ImGui_SameLine(ctx)
-      if reaper.ImGui_Button(ctx, "Annuler##editcancel" .. idx) then
+      if reaper.ImGui_Button(ctx, "Annuler##editcancel") then
         edit_idx, edit_error = nil, nil
       end
       if edit_error then PA_GuiErrorText(edit_error) end
     else
-      if reaper.ImGui_SmallButton(ctx, "✕##del" .. idx) then to_remove = idx end
+      reaper.ImGui_AlignTextToFramePadding(ctx)
+      reaper.ImGui_Text(ctx, t.label)
+      drawPill(t.prefix, TAG_PILL_BG, TAG_PILL_FG)
       reaper.ImGui_SameLine(ctx)
-      if reaper.ImGui_SmallButton(ctx, "✎##edit" .. idx) then
+      reaper.ImGui_SetCursorPosX(ctx, actions_x)
+      if PA_GuiPencilButton("##edit") then
         edit_idx, edit_error = idx, nil
         edit_name_buf, edit_prefix_buf = t.label, t.prefix
       end
-      reaper.ImGui_SameLine(ctx)
-      reaper.ImGui_Text(ctx, t.label)
-      drawPill(t.prefix, TAG_PILL_BG, TAG_PILL_FG)
+      reaper.ImGui_SameLine(ctx, 0, S(6))
+      if PA_GuiXButton("##del") then to_remove = idx end
     end
+    reaper.ImGui_PopID(ctx)
   end
   if to_remove then
     removeCategory(to_remove)
@@ -521,7 +531,10 @@ local function drawSettingsWindow()
   end
 
   reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_SetNextItemWidth(ctx, S(170))
+  -- Nom extensible, préfixe fixe, "Ajouter" calé au bord droit
+  local aj_w  = reaper.ImGui_CalcTextSize(ctx, "Ajouter") + S(24)
+  local avail = reaper.ImGui_GetContentRegionAvail(ctx)
+  reaper.ImGui_SetNextItemWidth(ctx, avail - S(70) - aj_w - S(16))
   local _
   _, cat_name_buf = reaper.ImGui_InputTextWithHint(ctx, "##catname", "Nom", cat_name_buf)
   reaper.ImGui_SameLine(ctx)
@@ -534,7 +547,7 @@ local function drawSettingsWindow()
   end
   if cat_error then PA_GuiErrorText(cat_error) end
 
-  reaper.ImGui_SeparatorText(ctx, "Plugins")
+  PA_GuiSection("Plugins")
   reaper.ImGui_TextDisabled(ctx, #all_plugins .. " plugins détectés")
   if reaper.ImGui_Button(ctx, "Mettre à jour la liste des plugins") then
     rescanPlugins()
@@ -624,7 +637,7 @@ local function loop()
       drawPill(active_tag.prefix .. "  " .. active_tag.label, ACCENT_BG, PA_GuiCol.ACCENT_TEXT)
     end
     -- keyboard hint, right-aligned
-    local hint = "↑↓ naviguer  ·  Entrée ajouter"
+    local hint = "↑↓ naviguer  ·  Entrée piste  ·  Alt+Entrée item  ·  Maj+Entrée input FX"
     reaper.ImGui_SameLine(ctx)
     local avail_w = reaper.ImGui_GetContentRegionAvail(ctx)
     local hint_w = reaper.ImGui_CalcTextSize(ctx, hint)
@@ -644,6 +657,11 @@ local function loop()
     -- at the top so row 1's highlight isn't clipped by the child window edge
     reaper.ImGui_SetCursorPosY(ctx, reaper.ImGui_GetCursorPosY(ctx) + S(5))
     local rows = filtered  -- menu actions rebuild `filtered` mid-frame; keep this frame's list stable
+    if #rows == 0 then
+      -- empty state: submit real content so EndChild has an item to size against
+      reaper.ImGui_SetCursorPosX(ctx, reaper.ImGui_GetCursorPosX(ctx) + S(12))
+      reaper.ImGui_TextDisabled(ctx, "Aucun plugin trouvé")
+    end
     reaper.ImGui_ListClipper_Begin(clipper, #rows)
     if scroll_to_selected and rows[selected_idx] then
       reaper.ImGui_ListClipper_IncludeItemByIndex(clipper, selected_idx - 1)

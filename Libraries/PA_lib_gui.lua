@@ -1,6 +1,6 @@
 -- @description Shared GUI helpers for PA_ scripts (ReaImGui theme, scale, widgets)
 -- @author lepierrealain
--- @version 1.1
+-- @version 1.2
 -- @requires ReaImGui
 
 -- Thème, échelle d'interface et widgets communs aux scripts PA_.
@@ -211,6 +211,40 @@ function PA_GuiPill(text, bg, fg)
   reaper.ImGui_Dummy(ctx, bw, line_h)
 end
 
+-- Titre de section des fenêtres de paramètres : SeparatorText si dispo
+-- (ReaImGui récent), sinon un fallback équivalent.
+function PA_GuiSection(label)
+  if reaper.ImGui_SeparatorText then
+    reaper.ImGui_SeparatorText(ctx, label)
+  else
+    reaper.ImGui_Spacing(ctx)
+    reaper.ImGui_Text(ctx, label)
+    reaper.ImGui_Separator(ctx)
+  end
+end
+
+-- Padding vertical réduit des checkboxes / radio buttons : la boîte reste
+-- lisible mais moins haute que les champs de saisie du thème.
+local CHECK_PAD_Y = 5
+
+-- Checkbox à boîte réduite ; mêmes retours que ImGui_Checkbox.
+function PA_GuiCheckbox(label, value)
+  reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(),
+    PA_S(12), PA_S(CHECK_PAD_Y))
+  local rv, nv = reaper.ImGui_Checkbox(ctx, label, value)
+  reaper.ImGui_PopStyleVar(ctx)
+  return rv, nv
+end
+
+-- Radio button à cercle réduit ; même retour que ImGui_RadioButton.
+function PA_GuiRadioButton(label, active)
+  reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding(),
+    PA_S(12), PA_S(CHECK_PAD_Y))
+  local rv = reaper.ImGui_RadioButton(ctx, label, active)
+  reaper.ImGui_PopStyleVar(ctx)
+  return rv
+end
+
 -- Texte d'erreur (rouge).
 function PA_GuiErrorText(text)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), PA_GuiCol.ERROR_TEXT)
@@ -247,6 +281,41 @@ function PA_GuiGearButton(id)
       gcx + ca * r_out, gcy + sa * r_out, col, PA_S(2.6))
   end
   reaper.ImGui_DrawList_AddCircle(dl, gcx, gcy, r_in, col, 0, PA_S(2.2))
+  return clicked
+end
+
+-- Bouton carré (hauteur de frame) avec croix dessinée (supprimer).
+-- Dessiné à la main : les glyphes ✕/✎ n'existent pas dans toutes les polices.
+function PA_GuiXButton(id)
+  local sz = reaper.ImGui_GetFrameHeight(ctx)
+  local clicked = reaper.ImGui_Button(ctx, id or "##pa_gui_x", sz, sz)
+  local x0, y0 = reaper.ImGui_GetItemRectMin(ctx)
+  local x1, y1 = reaper.ImGui_GetItemRectMax(ctx)
+  local cx, cy = (x0 + x1) * 0.5, (y0 + y1) * 0.5
+  local dl = reaper.ImGui_GetWindowDrawList(ctx)
+  local col = reaper.ImGui_IsItemHovered(ctx) and PA_GuiCol.ICON_HOVER or PA_GuiCol.ICON
+  local r = PA_S(4.2)
+  reaper.ImGui_DrawList_AddLine(dl, cx - r, cy - r, cx + r, cy + r, col, PA_S(2))
+  reaper.ImGui_DrawList_AddLine(dl, cx - r, cy + r, cx + r, cy - r, col, PA_S(2))
+  return clicked
+end
+
+-- Bouton carré (hauteur de frame) avec crayon dessiné (éditer).
+function PA_GuiPencilButton(id)
+  local sz = reaper.ImGui_GetFrameHeight(ctx)
+  local clicked = reaper.ImGui_Button(ctx, id or "##pa_gui_pencil", sz, sz)
+  local x0, y0 = reaper.ImGui_GetItemRectMin(ctx)
+  local x1, y1 = reaper.ImGui_GetItemRectMax(ctx)
+  local cx, cy = (x0 + x1) * 0.5, (y0 + y1) * 0.5
+  local dl = reaper.ImGui_GetWindowDrawList(ctx)
+  local col = reaper.ImGui_IsItemHovered(ctx) and PA_GuiCol.ICON_HOVER or PA_GuiCol.ICON
+  -- corps du crayon (diagonale) + pointe (triangle) en bas à gauche
+  reaper.ImGui_DrawList_AddLine(dl, cx - PA_S(2.2), cy + PA_S(2.2),
+    cx + PA_S(5.2), cy - PA_S(5.2), col, PA_S(2.6))
+  reaper.ImGui_DrawList_AddTriangleFilled(dl,
+    cx - PA_S(6.2), cy + PA_S(6.2),
+    cx - PA_S(4.6), cy + PA_S(1.4),
+    cx - PA_S(1.4), cy + PA_S(4.6), col)
   return clicked
 end
 

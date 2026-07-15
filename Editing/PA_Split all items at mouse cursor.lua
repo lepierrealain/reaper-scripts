@@ -7,13 +7,17 @@ local lib_root = lib_path .. ".." .. package.config:sub(1,1) .. "Libraries" .. p
 dofile(lib_root .. "PA_lib_mouse.lua")
 
 local function main()
+  -- Temps de split : sous la souris si elle est dans l'arrangeur, sinon edit cursor.
   local _, mouse_time = PA_GetMouseArrangeContext()
-  if not mouse_time then return end
+  local base_time = mouse_time or reaper.GetCursorPosition()
 
   local snap_enabled = reaper.GetToggleCommandState(1157) == 1
-  local split_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
+  local split_time = snap_enabled and reaper.SnapToGrid(0, base_time) or base_time
 
   reaper.Undo_BeginBlock()
+
+  -- On désélectionne tout, puis on sélectionne la partie droite de chaque item splitté.
+  reaper.SelectAllMediaItems(0, false)
 
   for t = 0, reaper.CountTracks(0) - 1 do
     local track = reaper.GetTrack(0, t)
@@ -22,7 +26,8 @@ local function main()
       local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
       local item_end   = item_start + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
       if split_time > item_start and split_time < item_end then
-        reaper.SplitMediaItem(item, split_time)
+        local right = reaper.SplitMediaItem(item, split_time)
+        if right then reaper.SetMediaItemSelected(right, true) end
       end
     end
   end

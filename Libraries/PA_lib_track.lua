@@ -395,12 +395,19 @@ end
 -- Applique le template adapté à une piste que le watcher voit armée sans
 -- marquage template : MIDI si un instrument (VSTi/CLAPi) est présent, sinon
 -- Input audio (input conservé/restauré, routing casque, monitoring on).
--- Ne touche pas aux options globales (auto record arm).
+-- Aligne aussi l'auto record arm global comme le font les templates manuels :
+-- activé en MIDI, désactivé en audio.
 function PA_AutoApplyTemplate(track, dest)
   if reaper.TrackFX_GetInstrument(track) >= 0 then
     applyMidiTemplate(track, dest)
+    if reaper.GetToggleCommandState(40736) ~= 1 then
+      reaper.Main_OnCommand(40736, 0)
+    end
   else
     applyInputTemplate(track, dest, nil)
+    if reaper.GetToggleCommandState(40736) == 1 then
+      reaper.Main_OnCommand(40736, 0)
+    end
   end
 end
 
