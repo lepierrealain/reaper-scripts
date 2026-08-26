@@ -37,9 +37,30 @@ local function main()
 
   local split_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
 
-  local item = PA_GetItemUnderMouse()
+  local num_selected = reaper.CountSelectedMediaItems(0)
 
   reaper.Undo_BeginBlock()
+
+  if num_selected > 1 then
+    -- Plusieurs items sélectionnés : trim du bord gauche au temps du curseur pour
+    -- chaque item, sans exiger position/durée identiques.
+    for i = 0, num_selected - 1 do
+      local sel_item = reaper.GetSelectedMediaItem(0, i)
+      local fadein = reaper.GetMediaItemInfo_Value(sel_item, "D_FADEINLEN")
+      -- PA_TrimItemLeft peut recréer l'item (dé-pool MIDI) ; il préserve alors le fadein
+      -- lui-même, donc on ne le réécrit que si l'item n'a pas changé.
+      local result = PA_TrimItemLeft(sel_item, split_time)
+      if result == sel_item and fadein > 0 then
+        reaper.SetMediaItemInfo_Value(sel_item, "D_FADEINLEN", fadein)
+      end
+    end
+
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Trim left of item under mouse cursor", -1)
+    return
+  end
+
+  local item = PA_GetItemUnderMouse()
 
   if item then
     -- Souris sur un item : trimmer le bord gauche

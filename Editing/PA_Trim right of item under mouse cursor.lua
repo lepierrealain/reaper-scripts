@@ -38,9 +38,29 @@ local function main()
 
   local split_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
 
-  local item = PA_GetItemUnderMouse()
+  local num_selected = reaper.CountSelectedMediaItems(0)
 
   reaper.Undo_BeginBlock()
+
+  if num_selected > 1 then
+    -- Plusieurs items sélectionnés : trim du bord droit au temps du curseur pour
+    -- chaque item, sans exiger position/durée identiques.
+    for i = 0, num_selected - 1 do
+      local sel_item = reaper.GetSelectedMediaItem(0, i)
+      local fadeout = reaper.GetMediaItemInfo_Value(sel_item, "D_FADEOUTLEN")
+      PA_TrimItemRight(sel_item, split_time)
+      if fadeout > 0 then
+        local new_len = reaper.GetMediaItemInfo_Value(sel_item, "D_LENGTH")
+        reaper.SetMediaItemInfo_Value(sel_item, "D_FADEOUTLEN", math.min(fadeout, new_len))
+      end
+    end
+
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Trim right of item under mouse cursor", -1)
+    return
+  end
+
+  local item = PA_GetItemUnderMouse()
 
   if item then
     -- Souris sur un item : trimmer le bord droit

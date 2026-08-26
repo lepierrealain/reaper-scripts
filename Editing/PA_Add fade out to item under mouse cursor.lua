@@ -31,7 +31,7 @@ end
 
 local function apply_fadeout(item, fade_len)
   local item_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-  reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.min(fade_len, item_len))
+  reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.max(0, math.min(fade_len, item_len)))
 end
 
 local function main()
@@ -41,9 +41,26 @@ local function main()
 
   local fade_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
 
-  local item, _ = PA_GetItemUnderMouse()
+  local num_selected = reaper.CountSelectedMediaItems(0)
 
   reaper.Undo_BeginBlock()
+
+  if num_selected > 1 then
+    -- Plusieurs items sélectionnés : fade appliqué jusqu'au temps du curseur pour
+    -- chaque item selon sa propre position, sans exiger position/durée identiques.
+    for i = 0, num_selected - 1 do
+      local sel_item = reaper.GetSelectedMediaItem(0, i)
+      local item_end = reaper.GetMediaItemInfo_Value(sel_item, "D_POSITION")
+        + reaper.GetMediaItemInfo_Value(sel_item, "D_LENGTH")
+      apply_fadeout(sel_item, item_end - fade_time)
+    end
+
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Add fade out to item under mouse cursor", -1)
+    return
+  end
+
+  local item, _ = PA_GetItemUnderMouse()
 
   if item then
     local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
