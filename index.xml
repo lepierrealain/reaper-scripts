@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="ad8dea8c375b392829840615632a81e86401eebc">
+<index version="1" name="Pierre-Alain Scripts" commit="6f03cff4764f8b38ec517b76fa949746c9711f33">
   <category name="Custom">
     <reapack name="PA_Add compressor.lua" type="script" desc="Add compressor on selected track (always add, never show existing)">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
@@ -28,6 +28,9 @@
       </version>
       <version name="1.9" author="lepierrealain" time="2026-07-15T14:02:36Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6e1287232c416ab96c049ebba1d97b75fceb6cdf/Custom/PA_Add%20plugin.lua</source>
+      </version>
+      <version name="2.0" author="lepierrealain" time="2026-09-30T09:03:25Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6f03cff4764f8b38ec517b76fa949746c9711f33/Custom/PA_Add%20plugin.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Add reverb.lua" type="script" desc="Add reverb on selected track (always add, never show existing)">
@@ -212,12 +215,15 @@
     </reapack>
   </category>
   <category name="Libraries">
-    <reapack name="PA_lib_autoregion.lua" type="script" desc="Auto region from items: état partagé + logique snapshot/diff">
+    <reapack name="PA_lib_autoregion.lua" type="script" desc="Auto region from items: shared state and snapshot/diff logic">
       <version name="1.0" author="lepierrealain" time="2026-07-05T13:00:03Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6d65cb0e714a8a216997710170cfc3684d29fa2a/Libraries/PA_lib_autoregion.lua</source>
       </version>
       <version name="1.1" author="lepierrealain" time="2026-07-15T14:02:36Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6e1287232c416ab96c049ebba1d97b75fceb6cdf/Libraries/PA_lib_autoregion.lua</source>
+      </version>
+      <version name="2.0" author="lepierrealain" time="2026-09-30T09:03:25Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6f03cff4764f8b38ec517b76fa949746c9711f33/Libraries/PA_lib_autoregion.lua</source>
       </version>
     </reapack>
     <reapack name="PA_lib_color.lua" type="script" desc="Auto colorize: réglages partagés + logique de colorisation des pistes">
@@ -293,13 +299,13 @@
     </reapack>
   </category>
   <category name="Special">
-    <reapack name="PA_Auto region from items (settings).lua" type="script" desc="Automatically add region from items from tracks: settings window">
+    <reapack name="PA_Auto region from items (settings).lua" type="script" desc="Automatically add regions from items: per-track settings">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Fen\u234 ?tre de r\u233 ?glages de "PA_Auto region from items" : prefix global, mode de nommage (single / item name / numbering / item group), s\u233 ?parateur, s\u233 ?lection des pistes suivies et nom de r\u233 ?gion par piste. En mode item group, un nom de base d\u233 ?di\u233 ? est incr\u233 ?ment\u233 ? par groupe REAPER (I_GROUPID) dans l'ordre chronologique. "Apply" sauvegarde dans le projet, applique une passe imm\u233 ?diate et r\u233 ?veille le watcher s'il tourne (sans watcher, \u231 ?a \u233 ?quivaut \u224 ? une application unique).\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Select the tracks to watch, then use each track's settings button to pick its region mode and naming template. Modes: First item, All items, REAPER Groups, and Close items. Naming supports $project, $track, $tracknumber, $item and $itemnumber. Add zeroes after either number token to pad it, e.g. $itemnumber000 produces 001 for the first item.\par}
 }
 ]]></description>
       </metadata>
@@ -308,6 +314,9 @@
       </version>
       <version name="1.2" author="lepierrealain" time="2026-07-15T14:02:36Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6e1287232c416ab96c049ebba1d97b75fceb6cdf/Special/PA_Auto%20region%20from%20items%20(settings).lua</source>
+      </version>
+      <version name="2.0" author="lepierrealain" time="2026-09-30T09:03:25Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6f03cff4764f8b38ec517b76fa949746c9711f33/Special/PA_Auto%20region%20from%20items%20(settings).lua</source>
       </version>
     </reapack>
     <reapack name="PA_Auto region from items.lua" type="script" desc="Automatically add region from items from tracks (background watcher)">
@@ -335,9 +344,37 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6d65cb0e714a8a216997710170cfc3684d29fa2a/Special/PA_Init%20automation%20before%20regions.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Lock items outside current region (defer).lua" type="script" desc="Lock items outside the region under the edit cursor (defer)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Script toggle \u224 ? laisser tourner en fond (toolbar ou __startup.lua). D\u233 ?verrouille les items qui chevauchent la r\u233 ?gion sous le curseur ainsi que toute leur cha\u238 ?ne de voisins contigus sur la m\u234 ?me piste. Entre deux r\u233 ?gions, conserve accessibles les r\u233 ?gions voisines de gauche et de droite. Les \u233 ?tats de verrouillage d'origine sont restaur\u233 ?s \u224 ? l'arr\u234 ?t.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.2" author="lepierrealain" time="2026-09-30T09:03:25Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6f03cff4764f8b38ec517b76fa949746c9711f33/Special/PA_Lock%20items%20outside%20current%20region%20(defer).lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Record and snap edge to measure if Music.lua" type="script" desc="Record and snap edge to measure if music">
       <version name="2.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Special/PA_Record%20and%20snap%20edge%20to%20measure%20if%20Music.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Set ruler zero at region start (defer).lua" type="script" desc="Set ruler zero to region start when edit cursor enters a region (defer)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Script toggle \u224 ? laisser tourner en fond (toolbar ou __startup.lua). Quand le curseur d'\u233 ?dition entre dans une r\u233 ?gion, place le z\u233 ?ro temporel du projet au d\u233 ?but de cette r\u233 ?gion. Le curseur est restaur\u233 ? imm\u233 ?diatement.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="lepierrealain" time="2026-09-30T09:03:25Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6f03cff4764f8b38ec517b76fa949746c9711f33/Special/PA_Set%20ruler%20zero%20at%20region%20start%20(defer).lua</source>
       </version>
     </reapack>
   </category>
