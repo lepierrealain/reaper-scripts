@@ -1,6 +1,6 @@
 -- @description Add plugin to selected track (searchable list)
 -- @author lepierrealain
--- @version 1.9
+-- @version 2.0
 -- @provides [main] .
 -- @requires js_ReaScriptAPI, ReaImGui
 
@@ -178,6 +178,18 @@ local function wordCount(name)
   return n
 end
 
+-- Extract a product family and its numeric version, e.g. "Kontakt 8".
+-- Newer releases are then sorted ahead of older ones within each format.
+local function extractVersionInfo(plugin)
+  local family, version = plugin:lower():match("^(.-)%s+[vV]?(%d[%d%.]*)")
+  if not family then return "", nil end
+
+  family = family:match("^%s*(.-)%s*$")
+  local parts = {}
+  for part in version:gmatch("%d+") do parts[#parts + 1] = tonumber(part) end
+  return family, parts
+end
+
 -- Precomputed per-plugin data: parsed parts, dedup key, sort keys, filter strings
 local INFO = {}
 local function buildInfo()
@@ -185,6 +197,7 @@ local function buildInfo()
   for _, name in ipairs(all_plugins) do
     local fmt, plugin, vendor = parseName(name)
     local nl = name:lower()
+    local version_family, version_parts = extractVersionInfo(plugin)
     INFO[name] = {
       fmt = fmt, plugin = plugin, vendor = vendor,
       key = (plugin .. "|" .. vendor):lower(),
@@ -192,10 +205,26 @@ local function buildInfo()
       lower_no_vendor = nl:gsub("%s*%b()%s*$", ""),
       rank = FORMAT_ORDER[nl:match("^([a-z0-9]+):")] or 8,
       words = wordCount(nl:gsub("^[^:]+:%s*", ""):gsub("%s*%b()%s*$", "")),
+      version_family = version_family,
+      version_parts = version_parts,
     }
   end
 end
 buildInfo()
+
+local function newerVersionFirst(a, b)
+  if not a.version_parts or not b.version_parts
+      or a.version_family == "" or a.version_family ~= b.version_family then
+    return nil
+  end
+
+  local count = math.max(#a.version_parts, #b.version_parts)
+  for i = 1, count do
+    local av, bv = a.version_parts[i] or 0, b.version_parts[i] or 0
+    if av ~= bv then return av > bv end
+  end
+  return nil
+end
 
 local function sortByFormat(t, words)
   local nwords = #words
@@ -206,6 +235,8 @@ local function sortByFormat(t, words)
       local ea, eb = (ia.words == nwords), (ib.words == nwords)
       if ea ~= eb then return ea end
     end
+    local newer = newerVersionFirst(ia, ib)
+    if newer ~= nil then return newer end
     return ia.lower < ib.lower
   end)
 end

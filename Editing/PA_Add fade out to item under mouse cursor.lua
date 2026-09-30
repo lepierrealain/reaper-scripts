@@ -31,6 +31,8 @@ end
 
 local function apply_fadeout(item, fade_len)
   local item_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  -- An automatic fade takes precedence over the manual fade length.
+  reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN_AUTO", 0)
   reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.max(0, math.min(fade_len, item_len)))
 end
 
@@ -85,9 +87,9 @@ local function main()
     end
 
     local grouped = PA_GetRelatedItemsAtSamePosition(left_item)
-    reaper.SetMediaItemInfo_Value(left_item, "D_FADEOUTLEN", 0)
+    apply_fadeout(left_item, 0)
     for _, gi in ipairs(grouped) do
-      reaper.SetMediaItemInfo_Value(gi, "D_FADEOUTLEN", 0)
+      apply_fadeout(gi, 0)
     end
   end
 
@@ -96,4 +98,3 @@ local function main()
 end
 
 main()
-
