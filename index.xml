@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="6f03cff4764f8b38ec517b76fa949746c9711f33">
+<index version="1" name="Pierre-Alain Scripts" commit="91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744">
   <category name="Custom">
     <reapack name="PA_Add compressor.lua" type="script" desc="Add compressor on selected track (always add, never show existing)">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
@@ -336,6 +336,20 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6d65cb0e714a8a216997710170cfc3684d29fa2a/Special/PA_Auto%20region%20from%20items.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Detect video cuts and add markers.lua" type="script" desc="Detect cuts in selected video items and add project markers">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Requires the ffmpeg command-line program in PATH (or set FFMPEG below). Detects scene changes in the active take of each selected item, then maps source timestamps to the project, including trims, play rate, source sections/reverse and item loops. Sensitivity is set with a 0-100% slider.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.2" author="lepierrealain" time="2026-10-01T09:22:45Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744/Special/PA_Detect%20video%20cuts%20and%20add%20markers.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Init automation before regions.lua" type="script" desc="Insert automation item 1s before each region and at end of each region on all envelopes with points">
       <version name="1.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Special/PA_Init%20automation%20before%20regions.lua</source>
@@ -377,6 +391,20 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6f03cff4764f8b38ec517b76fa949746c9711f33/Special/PA_Set%20ruler%20zero%20at%20region%20start%20(defer).lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Tint arrange view with region colors (defer).lua" type="script" desc="Tint arrange view with visible region colors (defer)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Toggle script. Adds a very subtle vertical tint across the arrange view for each visible region, including colors inherited from ruler lanes. Requires js_ReaScriptAPI. Run again to remove the tint. Change OPACITY below to adjust its strength.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.3" author="lepierrealain" time="2026-10-01T09:22:45Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744/Special/PA_Tint%20arrange%20view%20with%20region%20colors%20(defer).lua</source>
+      </version>
+    </reapack>
   </category>
   <category name="Tracks">
     <reapack name="PA_Auto colorize tracks (settings).lua" type="script" desc="Auto colorize tracks: settings window">
@@ -413,9 +441,28 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6e1287232c416ab96c049ebba1d97b75fceb6cdf/Tracks/PA_Auto%20colorize%20tracks.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Compact items on identical selected tracks.lua" type="script" desc="Compact items on identical selected tracks">
+      <version name="1.3" author="lepierrealain" time="2026-10-01T09:22:45Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744/Tracks/PA_Compact%20items%20on%20identical%20selected%20tracks.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Duplicate track.lua" type="script" desc="Duplicate track (sans items, renommage auto)">
       <version name="1.0" author="lepierrealain" time="2026-07-05T13:00:03Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6d65cb0e714a8a216997710170cfc3684d29fa2a/Tracks/PA_Duplicate%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Group items by similar names.lua" type="script" desc="Group items from selected tracks by similar take names">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Replaces a contiguous block of selected tracks with tracks grouped by take name. Overlapping items use extra tracks. The slider sets the minimum name similarity; 100% groups only exactly identical names.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.1" author="lepierrealain" time="2026-10-01T09:22:45Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744/Tracks/PA_Group%20items%20by%20similar%20names.lua</source>
       </version>
     </reapack>
     <reapack name="PA_New track.lua" type="script" desc="Insert new track in same folder as previous track">
