@@ -22,7 +22,8 @@ local function get_first_item_to_left(track, time, lane)
     if lane == nil or math.floor(reaper.GetMediaItemInfo_Value(item, "I_FIXEDLANE")) == lane then
       local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
       local item_end   = item_start + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-      if item_end < time and item_end > closest_end then
+      if item_end < time and item_end > closest_end
+        and PA_IsItemAtMouseHeight(track, item) then
         closest = item
         closest_end = item_end
       end
@@ -43,10 +44,8 @@ local function main()
   reaper.Undo_BeginBlock()
 
   if num_selected > 1 then
-    -- Plusieurs items sélectionnés : trim du bord droit au temps du curseur pour
-    -- chaque item, sans exiger position/durée identiques.
-    for i = 0, num_selected - 1 do
-      local sel_item = reaper.GetSelectedMediaItem(0, i)
+    -- Un seul item par piste : le bord droit le plus à droite.
+    for _, sel_item in ipairs(PA_GetSelectedEdgeItems("right")) do
       local fadeout = reaper.GetMediaItemInfo_Value(sel_item, "D_FADEOUTLEN")
       PA_TrimItemRight(sel_item, split_time)
       if fadeout > 0 then
@@ -65,6 +64,7 @@ local function main()
   if item then
     -- Souris sur un item : trimmer le bord droit
     local grouped = PA_GetRelatedItemsAtSamePosition(item)
+    PA_SelectItemIfFreeModeAndNoneSelected(track, item, num_selected)
     local fadeout = reaper.GetMediaItemInfo_Value(item, "D_FADEOUTLEN")
     PA_TrimItemRight(item, split_time)
     if fadeout > 0 then
@@ -98,6 +98,7 @@ local function main()
     end
 
     local grouped = PA_GetRelatedItemsAtSamePosition(left_item)
+    PA_SelectItemIfFreeModeAndNoneSelected(track, left_item, num_selected)
     PA_TrimItemRight(left_item, split_time)
     for _, gi in ipairs(grouped) do
       PA_TrimItemRight(gi, split_time)

@@ -21,7 +21,8 @@ local function get_first_item_to_left(track, time)
     local item = reaper.GetTrackMediaItem(track, i)
     local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
     local item_end   = item_start + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-    if item_end < time and item_end > closest_end then
+    if item_end < time and item_end > closest_end
+      and PA_IsItemAtMouseHeight(track, item) then
       closest = item
       closest_end = item_end
     end
@@ -48,10 +49,8 @@ local function main()
   reaper.Undo_BeginBlock()
 
   if num_selected > 1 then
-    -- Plusieurs items sélectionnés : fade appliqué jusqu'au temps du curseur pour
-    -- chaque item selon sa propre position, sans exiger position/durée identiques.
-    for i = 0, num_selected - 1 do
-      local sel_item = reaper.GetSelectedMediaItem(0, i)
+    -- Un seul item par piste : le bord droit le plus à droite.
+    for _, sel_item in ipairs(PA_GetSelectedEdgeItems("right")) do
       local item_end = reaper.GetMediaItemInfo_Value(sel_item, "D_POSITION")
         + reaper.GetMediaItemInfo_Value(sel_item, "D_LENGTH")
       apply_fadeout(sel_item, item_end - fade_time)
@@ -74,6 +73,7 @@ local function main()
     end
 
     local grouped = PA_GetRelatedItemsAtSamePosition(item)
+    PA_SelectItemIfFreeModeAndNoneSelected(track, item, num_selected)
     apply_fadeout(item, fade_len)
     for _, gi in ipairs(grouped) do
       apply_fadeout(gi, fade_len)
@@ -87,6 +87,7 @@ local function main()
     end
 
     local grouped = PA_GetRelatedItemsAtSamePosition(left_item)
+    PA_SelectItemIfFreeModeAndNoneSelected(track, left_item, num_selected)
     apply_fadeout(left_item, 0)
     for _, gi in ipairs(grouped) do
       apply_fadeout(gi, 0)

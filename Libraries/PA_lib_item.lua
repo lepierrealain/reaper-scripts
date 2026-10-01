@@ -2,6 +2,30 @@
 -- @author lepierrealain
 -- @version 1.0
 
+-- Retourne un seul item sélectionné par piste : celui dont le bord demandé
+-- est le plus à gauche ou le plus à droite. L'ordre des pistes suit la sélection.
+function PA_GetSelectedEdgeItems(edge)
+  local by_track, result = {}, {}
+  for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
+    local item = reaper.GetSelectedMediaItem(0, i)
+    local track = reaper.GetMediaItemTrack(item)
+    local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+    local item_edge = edge == "left" and pos
+      or pos + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+    local current = by_track[track]
+    if not current then
+      current = { index = #result + 1, value = item_edge }
+      by_track[track] = current
+      result[current.index] = item
+    elseif (edge == "left" and item_edge < current.value)
+      or (edge == "right" and item_edge > current.value) then
+      current.value = item_edge
+      result[current.index] = item
+    end
+  end
+  return result
+end
+
 -- Retourne une liste d'items liés à ref_item par même position+longueur, via :
 --   - item group (I_GROUPID)
 --   - track group (MEDIA_EDIT_LEAD/FOLLOW)

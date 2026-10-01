@@ -21,7 +21,8 @@ local function get_first_item_to_right(track, time, lane)
     local item = reaper.GetTrackMediaItem(track, i)
     if lane == nil or math.floor(reaper.GetMediaItemInfo_Value(item, "I_FIXEDLANE")) == lane then
       local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
-      if item_start > time and item_start < closest_start then
+      if item_start > time and item_start < closest_start
+        and PA_IsItemAtMouseHeight(track, item) then
         closest = item
         closest_start = item_start
       end
@@ -42,10 +43,8 @@ local function main()
   reaper.Undo_BeginBlock()
 
   if num_selected > 1 then
-    -- Plusieurs items sélectionnés : trim du bord gauche au temps du curseur pour
-    -- chaque item, sans exiger position/durée identiques.
-    for i = 0, num_selected - 1 do
-      local sel_item = reaper.GetSelectedMediaItem(0, i)
+    -- Un seul item par piste : le bord gauche le plus à gauche.
+    for _, sel_item in ipairs(PA_GetSelectedEdgeItems("left")) do
       local fadein = reaper.GetMediaItemInfo_Value(sel_item, "D_FADEINLEN")
       -- PA_TrimItemLeft peut recréer l'item (dé-pool MIDI) ; il préserve alors le fadein
       -- lui-même, donc on ne le réécrit que si l'item n'a pas changé.
@@ -65,6 +64,7 @@ local function main()
   if item then
     -- Souris sur un item : trimmer le bord gauche
     local grouped = PA_GetRelatedItemsAtSamePosition(item)
+    PA_SelectItemIfFreeModeAndNoneSelected(track, item, num_selected)
     local fadein = reaper.GetMediaItemInfo_Value(item, "D_FADEINLEN")
     -- PA_TrimItemLeft peut recréer l'item (dé-pool MIDI) ; il préserve alors le fadein
     -- lui-même, donc on ne le réécrit que si l'item n'a pas changé.
@@ -98,6 +98,7 @@ local function main()
     end
 
     local grouped = PA_GetRelatedItemsAtSamePosition(right_item)
+    PA_SelectItemIfFreeModeAndNoneSelected(track, right_item, num_selected)
     PA_TrimItemLeft(right_item, split_time)
     for _, gi in ipairs(grouped) do
       PA_TrimItemLeft(gi, split_time)

@@ -37,11 +37,43 @@ function PA_GetHoveredFixedLane(track)
   return math.max(0, math.min(math.floor(rel_y / lane_h), lane_count - 1))
 end
 
+-- En free item positioning, limite la recherche d'un item voisin à la hauteur
+-- survolée. Hors de ce mode, tous les items restent candidats.
+function PA_IsItemAtMouseHeight(track, item)
+  if reaper.GetMediaTrackInfo_Value(track, "I_FREEMODE") ~= 1 then return true end
+
+  local _, mouse_y = reaper.GetMousePosition()
+  local tcp_y = reaper.GetMediaTrackInfo_Value(track, "I_TCPY")
+  local arrange_wnd = reaper.JS_Window_FindChildByID(reaper.GetMainHwnd(), 1000)
+  local _, _, wnd_y = reaper.JS_Window_GetRect(arrange_wnd)
+  local rel_y = mouse_y - (wnd_y + tcp_y)
+  local item_y = reaper.GetMediaItemInfo_Value(item, "I_LASTY")
+  local item_h = reaper.GetMediaItemInfo_Value(item, "I_LASTH")
+  return rel_y >= item_y and rel_y < item_y + item_h
+end
+
+function PA_SelectItemIfFreeModeAndNoneSelected(track, item, num_selected)
+  if item and num_selected == 0
+    and reaper.GetMediaTrackInfo_Value(track, "I_FREEMODE") == 1 then
+    reaper.SetMediaItemSelected(item, true)
+  end
+end
+
 -- Retourne l'item et le temps sous la souris dans l'arrangeur, ou nil, nil.
 -- En mode fixed lanes (I_NUMFIXEDLANES > 1), seuls les items de la lane survolée sont candidats.
+-- En free item positioning, utilise les coordonnées écran pour distinguer les items superposés.
 function PA_GetItemUnderMouse()
   local track, mouse_time = PA_GetMouseArrangeContext()
   if not track or not mouse_time then return nil, nil end
+
+  if reaper.GetMediaTrackInfo_Value(track, "I_FREEMODE") == 1 then
+    local mouse_x, mouse_y = reaper.GetMousePosition()
+    local item = reaper.GetItemFromPoint(mouse_x, mouse_y, true)
+    if item and reaper.GetMediaItemTrack(item) == track then
+      return item, mouse_time
+    end
+    return nil, nil
+  end
 
   local hovered_lane = PA_GetHoveredFixedLane(track)
 
