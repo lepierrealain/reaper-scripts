@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Pierre-Alain Scripts" commit="91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744">
+<index version="1" name="Pierre-Alain Scripts" commit="bb2ae38a65282a510366af2b1c4394ede1246d62">
   <category name="Custom">
     <reapack name="PA_Add compressor.lua" type="script" desc="Add compressor on selected track (always add, never show existing)">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
@@ -115,6 +115,20 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb0be664a25a7d7a86607c4678701e406d6dd8c6/Editing/PA_Add%20fade%20out%20to%20item%20under%20mouse%20cursor.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Copy first item to left of mouse cursor.lua" type="script" desc="Copy first item to left of mouse cursor">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Copie l'item le plus proche entierement a gauche sur la piste survolee. Le debut de la copie est place sous la souris (grille si snap actif). Respecte la lane survolee et la hauteur en free item positioning. Necessite SWS ; js_ReaScriptAPI pour les lanes et le free positioning.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Editing/PA_Copy%20first%20item%20to%20left%20of%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Cut item under mouse cursor and next ones and remove Temp track if needed.lua" type="script" desc="Cut item under mouse cursor and next ones and remove Temp track if needed">
       <version name="1.0" author="lepierrealain" time="2026-07-05T13:00:03Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6d65cb0e714a8a216997710170cfc3684d29fa2a/Editing/PA_Cut%20item%20under%20mouse%20cursor%20and%20next%20ones%20and%20remove%20Temp%20track%20if%20needed.lua</source>
@@ -131,6 +145,20 @@
     <reapack name="PA_Duplicate item to track under mouse.lua" type="script" desc="Duplicate item to track under mouse">
       <version name="1.0" author="lepierrealain" time="2026-06-11T15:55:27Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/a934c4b99e39b9901373c3abfe3254adca2c12cd/Editing/PA_Duplicate%20item%20to%20track%20under%20mouse.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Edit visible items on selected tracks under mouse cursor (toggle).lua" type="script" desc="Edit visible items on selected tracks under mouse cursor (toggle)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Active les \u233 ?ditions sous la souris sur la piste survol\u233 ?e et les pistes s\u233 ?lectionn\u233 ?es. Un item par piste, au temps souris ou voisin du c\u244 ?t\u233 ? \u233 ?dit\u233 ? pour les trims/fondus. Ignore les items hors \u233 ?cran, les lanes cach\u233 ?es et les items verrouill\u233 ?s. Compatible avec trim gauche/droit, fondus, split, snap offset et copie du voisin gauche. Relancer l'action la d\u233 ?sactive. Son bouton de toolbar reste allum\u233 ? tant qu'elle tourne. N\u233 ?cessite js_ReaScriptAPI pour limiter les \u233 ?ditions \u224 ? la zone visible.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Editing/PA_Edit%20visible%20items%20on%20selected%20tracks%20under%20mouse%20cursor%20(toggle).lua</source>
       </version>
     </reapack>
     <reapack name="PA_Group close items.lua" type="script" desc="Group close items">
@@ -151,6 +179,34 @@
     <reapack name="PA_Remove silence under mouse cusor.lua" type="script" desc="Remove silence under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-06-29T12:03:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6c54873237bb1e3b7796e0761a3af5e1e85485ef/Editing/PA_Remove%20silence%20under%20mouse%20cusor.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Rename source files and take names from CSV.lua" type="script" desc="Rename source files and take names from CSV">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Reads old_name,new_name from a CSV (comma or semicolon, UTF-8). Renames matching source files in their current folder and every matching take in the current project. Preserves source sections and item settings. Shows a preview, saves a project backup and a reverse CSV before applying. Disk renames cannot be undone with REAPER's Undo. Use the reverse CSV.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Editing/PA_Rename%20source%20files%20and%20take%20names%20from%20CSV.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Rename take names from CSV.lua" type="script" desc="Rename take names from CSV (keep source files unchanged)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Reads old_name,new_name from a UTF-8 CSV (comma or semicolon). Matches source filenames, including section/reversed sources; falls back to the current take name. Renames all matching takes in the current project. Does not rename, move or relink files. Changes can be undone with Ctrl+Z.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Editing/PA_Rename%20take%20names%20from%20CSV.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Select all items on track under mouse cursor (defer).lua" type="script" desc="Select all items on track under mouse cursor (defer)">
@@ -211,6 +267,13 @@
     <reapack name="PA_Trim right of item under mouse cursor.lua" type="script" desc="Trim right of item under mouse cursor">
       <version name="1.0" author="lepierrealain" time="2026-05-28T12:21:43Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/4b5206b8690c5e545070ab6fbd78d470eb919868/Editing/PA_Trim%20right%20of%20item%20under%20mouse%20cursor.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="jsfx">
+    <reapack name="PA_MIDI Smart Quantizer.jsfx" type="effect" desc="PA MIDI Smart Quantizer">
+      <version name="1.2" author="Pierre-Alain Lecroart" time="2026-10-22T13:03:55Z">
+        <source>https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/jsfx/PA_MIDI%20Smart%20Quantizer.jsfx</source>
       </version>
     </reapack>
   </category>
@@ -350,6 +413,20 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744/Special/PA_Detect%20video%20cuts%20and%20add%20markers.lua</source>
       </version>
     </reapack>
+    <reapack name="PA_Duplicate selected region with offset.lua" type="script" desc="Duplicate selected region with offset, preserving beat within measure">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Duplique une r\u233 ?gion et son contenu sur les m\u234 ?mes pistes (REAPER 6.59+). R\u233 ?gion s\u233 ?lectionn\u233 ?e dans la r\u232 ?gle / le gestionnaire ; sinon, s\u233 ?lection temporelle correspondant exactement \u224 ? une r\u233 ?gion ; sinon, r\u233 ?gion au curseur. Demande un d\u233 ?calage positif ou nul en secondes ou mesures, apr\u232 ?s la fin de la r\u233 ?gion. Les d\u233 ?cimales sont accept\u233 ?es (point ou virgule). Fen\u234 ?tre ReaImGui avec boutons radio Secondes / Mesures. Arrondit vers le haut au m\u234 ?me temps et \u224 ? la m\u234 ?me fraction de temps que le d\u233 ?but source. La copie est plac\u233 ?e au plus t\u244 ?t apr\u232 ?s la fin de l'original. Comme une copie native de r\u233 ?gion, ins\u232 ?re de l'espace et d\u233 ?cale la suite du projet, en copiant aussi les automations et les changements de tempo. Conserve le nom, la couleur et la lane de la r\u233 ?gion. Une seule annulation.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.1" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Special/PA_Duplicate%20selected%20region%20with%20offset.lua</source>
+      </version>
+    </reapack>
     <reapack name="PA_Init automation before regions.lua" type="script" desc="Insert automation item 1s before each region and at end of each region on all envelopes with points">
       <version name="1.1" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Special/PA_Init%20automation%20before%20regions.lua</source>
@@ -451,23 +528,38 @@
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/6d65cb0e714a8a216997710170cfc3684d29fa2a/Tracks/PA_Duplicate%20track.lua</source>
       </version>
     </reapack>
-    <reapack name="PA_Group items by similar names.lua" type="script" desc="Group items from selected tracks by similar take names">
+    <reapack name="PA_Group items from ChatGPT list.lua" type="script" desc="Group selected items from a ChatGPT list">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Replaces a contiguous block of selected tracks with tracks grouped by take name. Overlapping items use extra tracks. The slider sets the minimum name similarity; 100% groups only exactly identical names.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Exports selected take names for classification, then creates folders and nested subfolders above the highest selected source track. Items keep their timeline positions and existing overlaps on the same source track.\par}
 }
 ]]></description>
       </metadata>
-      <version name="1.1" author="lepierrealain" time="2026-10-01T09:22:45Z">
-        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/91fd2b52c6668e8ba0da8b565ab1b3c4cb61b744/Tracks/PA_Group%20items%20by%20similar%20names.lua</source>
+      <version name="1.2" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Tracks/PA_Group%20items%20from%20ChatGPT%20list.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Keep only folder tracks selected.lua" type="script" desc="Keep only folder tracks selected">
+      <version name="1.0" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Tracks/PA_Keep%20only%20folder%20tracks%20selected.lua</source>
       </version>
     </reapack>
     <reapack name="PA_New track.lua" type="script" desc="Insert new track in same folder as previous track">
       <version name="1.0" author="lepierrealain" time="2026-06-09T09:15:37Z">
         <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/8e8c9f2decf44a566a57d18ae0650471b42792a7/Tracks/PA_New%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Rename child tracks from parent.lua" type="script" desc="Rename selected child tracks from parent (numbered)">
+      <version name="1.1" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Tracks/PA_Rename%20child%20tracks%20from%20parent.lua</source>
+      </version>
+    </reapack>
+    <reapack name="PA_Select all child folder tracks.lua" type="script" desc="Select all child folder tracks (keep current selection)">
+      <version name="1.0" author="lepierrealain" time="2026-10-22T13:03:55Z">
+        <source main="main">https://github.com/lepierrealain/reaper-scripts/raw/bb2ae38a65282a510366af2b1c4394ede1246d62/Tracks/PA_Select%20all%20child%20folder%20tracks.lua</source>
       </version>
     </reapack>
     <reapack name="PA_Track volume.lua" type="script" desc="Track volume under mouse (move mouse to adjust)">
