@@ -39,6 +39,23 @@ local function main()
 
   local split_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
 
+  local track_targets = PA_GetMouseEditTargets(mouse_time, "right")
+  if track_targets then
+    if #track_targets == 0 then return end
+    reaper.Undo_BeginBlock()
+    for _, item in ipairs(track_targets) do
+      if split_time > reaper.GetMediaItemInfo_Value(item, "D_POSITION") then
+        local fadeout = reaper.GetMediaItemInfo_Value(item, "D_FADEOUTLEN")
+        PA_TrimItemRight(item, split_time)
+        local length = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+        reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.min(fadeout, length))
+      end
+    end
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Trim right of visible items on selected tracks", -1)
+    return
+  end
+
   local num_selected = reaper.CountSelectedMediaItems(0)
 
   reaper.Undo_BeginBlock()

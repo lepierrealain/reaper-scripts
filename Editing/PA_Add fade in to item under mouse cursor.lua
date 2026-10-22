@@ -43,6 +43,19 @@ local function main()
 
   local fade_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
 
+  local track_targets = PA_GetMouseEditTargets(mouse_time, "left")
+  if track_targets then
+    if #track_targets == 0 then return end
+    reaper.Undo_BeginBlock()
+    for _, item in ipairs(track_targets) do
+      local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      apply_fadein(item, fade_time - item_start)
+    end
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Add fade in to visible items on selected tracks", -1)
+    return
+  end
+
   local num_selected = reaper.CountSelectedMediaItems(0)
 
   reaper.Undo_BeginBlock()

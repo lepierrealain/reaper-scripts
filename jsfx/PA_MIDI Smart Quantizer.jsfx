@@ -1,0 +1,738 @@
+desc:PA MIDI Smart Quantizer
+// @version 1.2
+// @author Pierre-Alain Lecroart
+// @description Live pitch quantizer with cumulative relative scale intervals.
+// Standalone EEL2 JSFX. See PA_MIDI Smart Quantizer.md for MIDI policies.
+tags: MIDI processing quantize scale
+in_pin:none
+out_pin:none
+options:no_meter maxmem=65536
+
+slider1:cfg_mode=1<0,2,1{Quantize,Relative,Mapping}>-Mode
+slider2:cfg_tie=1<0,1,1{Down,Up}>-Tie break
+slider3:cfg_channel=0<0,16,1{All,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}>-MIDI channel
+slider4:cfg_mask=4095<0,4095,1>-Allowed pitch classes (bit mask)
+slider5:cfg_root=0<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Preset root
+slider6:cfg_preset=1<0,10,1{Custom,Chromatic,Major,Natural minor,Major pentatonic,Minor pentatonic,Dorian,Mixolydian,Whole tone,Major triad,Minor triad}>-Scale preset
+slider7:cfg_panic=0<0,1,1{A,B}>-Panic (toggle)
+slider8:map_c=0<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map C
+slider9:map_cs=1<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map C#
+slider10:map_d=2<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map D
+slider11:map_ds=3<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map D#
+slider12:map_e=4<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map E
+slider13:map_f=5<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map F
+slider14:map_fs=6<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map F#
+slider15:map_g=7<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map G
+slider16:map_gs=8<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map G#
+slider17:map_a=9<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map A
+slider18:map_as=10<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map A#
+slider19:map_b=11<0,11,1{C,C#,D,D#,E,F,F#,G,G#,A,A#,B}>-Map B
+slider20:cfg_sustain=0<0,1,1{Thru,Capture}>-Capture sustain
+slider21:cfg_relative_ref=0<0,1,1{Base,Last note}>-Relative input reference
+
+@init
+ext_noinit = 1;
+ext_nodenorm = 1;
+ext_midi_bus = 1;
+pdc_delay = 0;
+gfx_ext_retina = max(1, gfx_ext_retina);
+
+// All arrays are allocated/touched here, never in the MIDI loop.
+// Voice IDs are 1..4096; zero is the null link.
+// Record: input key, output (-1=muted, -2=cancelled), key down,
+//         next key/FIFO, next live, previous live, release velocity, owns output.
+// A stopped base keeps its input/output metadata until its physical release.
+MAX_VOICES = 4096;
+STRIDE = 8;
+candidates = 0;
+nearest = 128;
+key_head = 256;
+key_tail = 2304;
+key_spill = 4352;
+owners = 6400;
+input_count = 8448;
+output_count = 8576;
+pedal = 8704;
+reference = 8720;
+channel_seen = 8736;
+pressure_seen = 8752;
+pedal_value = 8880;
+pedal_out = 8896;
+relative_cursor = 8912;
+relative_last_input = 8928;
+voices = 9000;
+white_position = 42000;
+
+function selected_channel(ch) (
+  cfg_channel == 0 || cfg_channel == ch + 1;
+);
+
+function pc_name(pc) (
+  pc == 0 ? "C" : pc == 1 ? "C#" : pc == 2 ? "D" : pc == 3 ? "D#" :
+  pc == 4 ? "E" : pc == 5 ? "F" : pc == 6 ? "F#" : pc == 7 ? "G" :
+  pc == 8 ? "G#" : pc == 9 ? "A" : pc == 10 ? "A#" : "B";
+);
+
+function preset_name(p) (
+  p == 0 ? "Custom" : p == 1 ? "Chromatic" : p == 2 ? "Major" :
+  p == 3 ? "Natural minor" : p == 4 ? "Major pentatonic" :
+  p == 5 ? "Minor pentatonic" : p == 6 ? "Dorian" :
+  p == 7 ? "Mixolydian" : p == 8 ? "Whole tone" :
+  p == 9 ? "Major triad" : "Minor triad";
+);
+
+function preset_mask(p root) local(base i result) (
+  base = p == 1 ? 4095 : p == 2 ? 2741 : p == 3 ? 1453 :
+         p == 4 ? 661 : p == 5 ? 1193 : p == 6 ? 1709 :
+         p == 7 ? 1717 : p == 8 ? 1365 : p == 9 ? 145 : 137;
+  result = 0; i = 0;
+  loop(12,
+    base & (1 << i) ? result |= 1 << ((i + root) % 12);
+    i += 1;
+  );
+  result;
+);
+
+// This cache is rebuilt only when the pitch selection or tie rule changes.
+function rebuild_selection() local(n i c d best distance) (
+  candidate_count = 0; n = 0;
+  loop(128,
+    (cfg_mask & (1 << (n % 12))) ? (
+      candidates[candidate_count] = n; candidate_count += 1;
+    );
+    n += 1;
+  );
+  n = 0;
+  loop(128,
+    best = -1; distance = 1000; i = 0;
+    loop(candidate_count,
+      c = candidates[i]; d = abs(c - n);
+      (d < distance || (d == distance && cfg_tie)) ? (
+        best = c; distance = d;
+      );
+      i += 1;
+    );
+    nearest[n] = best; n += 1;
+  );
+  cached_mask = cfg_mask; cached_tie = cfg_tie;
+);
+
+function available_pitch(ch target shared) local(i c d best distance) (
+  best = -1; distance = 1000; i = 0;
+  loop(candidate_count,
+    c = candidates[i]; d = abs(c - target);
+    (!owners[ch * 128 + c] || c == shared) &&
+    (d < distance || (d == distance && cfg_tie)) ? (
+      best = c; distance = d;
+    );
+    i += 1;
+  );
+  best;
+);
+
+function find_reference(ch) local(id p found) (
+  id = live_head; found = 0;
+  while(id && !found) (
+    p = voices + (id - 1) * STRIDE;
+    p[2] && p[1] >= 0 && floor(p[0] / 128) == ch ? found = id;
+    id = p[4];
+  );
+  reference[ch] = found;
+  // Base follows physical keys. Last-note memory survives every key release.
+  !cfg_relative_ref ? (
+    relative_cursor[ch] = found ? voices[(found - 1) * STRIDE + 1] : -1;
+    relative_last_input[ch] = found ? voices[(found - 1) * STRIDE] % 128 : -1;
+  );
+);
+
+// Read the input interval from the HELD reference as a musical interval:
+// minor/major second = one scale step, minor/major third = two, etc.
+// A tritone is a fourth (Down) or fifth (Up); each octave adds seven steps.
+function interval_degrees(interval) local(distance chromatic degrees) (
+  distance = abs(interval); chromatic = distance % 12;
+  degrees = floor(distance / 12) * 7;
+  degrees += chromatic == 0 ? 0 : chromatic <= 2 ? 1 :
+             chromatic <= 4 ? 2 : chromatic == 5 ? 3 :
+             chromatic == 6 ? (cfg_tie ? 4 : 3) :
+             chromatic == 7 ? 4 : chromatic <= 9 ? 5 : 6;
+  degrees;
+);
+
+// Base: interval from the held base. Last note: interval from the last
+// successful input, including after its release. Both walk from the last output.
+function relative_pitch(ch note) local(p ref rin rout shared interval current remaining i c ready) (
+  ref = reference[ch];
+  ready = cfg_relative_ref ? relative_last_input[ch] >= 0 : ref > 0;
+  !ready ? (
+    // Pedal-held voices may still occupy pitches after all keys are up.
+    available_pitch(ch, note, -1);
+  ) : (
+    shared = -1;
+    ref ? (p = voices + (ref - 1) * STRIDE; shared = p[1];);
+    cfg_relative_ref ? (
+      rin = relative_last_input[ch]; rout = relative_cursor[ch];
+    ) : (
+      rin = p[0] % 128; rout = p[1];
+    );
+    interval = note - rin;
+    interval == 0 ? available_pitch(ch, rout, rout) : (
+      current = relative_cursor[ch]; remaining = interval_degrees(interval);
+      i = 0;
+      loop(candidate_count,
+        c = candidates[interval > 0 ? i : candidate_count - 1 - i];
+        remaining > 0 && (!owners[ch * 128 + c] || c == shared) &&
+        (interval > 0 ? c > current : c < current) ? (
+          current = c; remaining -= 1;
+        );
+        i += 1;
+      );
+      remaining == 0 ? current : -1;
+    );
+  );
+);
+
+function choose_pitch(ch note) local(out) (
+  !selected_channel(ch) ? note : cfg_mode == 2 ? (
+    out = floor(note / 12) * 12 + min(11,max(0,floor(slider(8 + note % 12))));
+    // Only the incomplete top MIDI octave needs an octave correction.
+    out > 127 ? out -= 12;
+    out;
+  ) : cfg_mode == 1 ? relative_pitch(ch, note) : nearest[note];
+);
+
+// Stop only this voice's output ownership; keep its FIFO and reference data.
+// In particular, stopping the base must bypass our internal sustain delay.
+function stop_voice_output(id offset velocity) local(p ch out) (
+  p = voices + (id - 1) * STRIDE;
+  p[7] ? (
+    ch = floor(p[0] / 128); out = p[1];
+    owners[ch * 128 + out] -= 1;
+    output_count[out] -= 1; sounding_count -= 1;
+    !owners[ch * 128 + out] ? midisend(offset, $x80 | ch, out, velocity);
+    p[7] = 0;
+  );
+);
+
+// Remove a voice whose physical key has already been released/popped.
+function finish_voice(id offset) local(p prev next) (
+  p = voices + (id - 1) * STRIDE;
+  stop_voice_output(id, offset, p[6]);
+  prev = p[5]; next = p[4];
+  prev ? voices[(prev - 1) * STRIDE + 4] = next : live_head = next;
+  next ? voices[(next - 1) * STRIDE + 5] = prev : live_tail = prev;
+  p[4] = free_head; free_head = id;
+  voice_count -= 1;
+);
+
+function finish_sustained(ch offset) local(id next p) (
+  id = live_head;
+  while(id) (
+    p = voices + (id - 1) * STRIDE; next = p[4];
+    !p[2] && floor(p[0] / 128) == ch ? finish_voice(id, offset);
+    id = next;
+  );
+);
+
+function release_pedal(ch offset) (
+  pedal[ch] = pedal_value[ch] = 0;
+  finish_sustained(ch, offset);
+);
+
+// Thru is the default: CC64 and physical-key releases reach the instrument.
+// Capture consumes CC64 and owns note durations until the pedal is released.
+// Transfer pedal state on a toggle so neither side retains a stale pedal-down.
+function apply_sustain_mode() local(ch) (
+  cfg_sustain != active_sustain ? (
+    ch = 0;
+    loop(16,
+      cfg_sustain ? (
+        pedal_out[ch] >= 64 ? midisend(0, $xB0 | ch, 64, 0);
+        pedal_out[ch] = 0;
+      ) : (
+        channel_seen[ch] || pedal_value[ch] || pedal_out[ch] ?
+          midisend(0, $xB0 | ch, 64, pedal_value[ch]);
+        pedal_out[ch] = pedal_value[ch];
+        finish_sustained(ch, 0);
+      );
+      ch += 1;
+    );
+    active_sustain = cfg_sustain;
+  );
+);
+
+// Panic keeps cancelled held keys in their FIFO as silent tombstones. Their
+// eventual Note Off must not release a NEW press of the same input key.
+function panic_channel(ch offset) local(n key id next p) (
+  n = 0;
+  loop(128,
+    key = ch * 128 + n;
+    owners[key] ? (
+      midisend(offset, $x80 | ch, n, 0);
+      output_count[n] -= owners[key]; sounding_count -= owners[key];
+      owners[key] = 0;
+    );
+    n += 1;
+  );
+  channel_seen[ch] || pedal[ch] ? (
+    midisend(offset, $xB0 | ch, 64, 0);
+    midisend(offset, $xB0 | ch, 66, 0);
+    midisend(offset, $xB0 | ch, 69, 0);
+    midisend(offset, $xB0 | ch, 123, 0);
+    midisend(offset, $xB0 | ch, 120, 0);
+  );
+  pedal[ch] = pedal_value[ch] = pedal_out[ch] = 0;
+  reference[ch] = 0; relative_cursor[ch] = relative_last_input[ch] = -1;
+  id = live_head;
+  while(id) (
+    p = voices + (id - 1) * STRIDE; next = p[4];
+    floor(p[0] / 128) == ch ? (
+      p[2] && p[1] != -2 ? (
+        input_count[p[0] % 128] -= 1; held_count -= 1;
+      );
+      p[1] = -2; p[7] = 0;
+      !p[2] ? finish_voice(id, offset);
+    );
+    id = next;
+  );
+);
+
+function panic_all(offset) local(ch) (
+  ch = 0; loop(16, panic_channel(ch, offset); ch += 1;);
+  last_input = last_output = -1; last_channel = 0;
+  muted_total = 0;
+);
+
+// A MIDI channel-mode reset terminates the input phrase itself. Unlike a UI
+// Panic, no later per-key releases are required by the sender. Discard its
+// cancelled FIFO entries as well, so the next phrase starts with empty queues.
+// Call only AFTER panic_channel has silenced outputs/cleared visible counters.
+function reset_input_channel(ch) local(id next p n key) (
+  id = live_head;
+  while(id) (
+    p = voices + (id - 1) * STRIDE; next = p[4];
+    floor(p[0] / 128) == ch ? (
+      p[2] = 0; finish_voice(id, 0);
+    );
+    id = next;
+  );
+  n = 0;
+  loop(128,
+    key = ch * 128 + n;
+    key_head[key] = key_tail[key] = key_spill[key] = 0;
+    n += 1;
+  );
+);
+
+function note_on(ch note velocity offset) local(key id p out tail) (
+  key = ch * 128 + note;
+  // Once a key has overflowed, reject further presses until its FIFO/spill
+  // drains, so that an untracked release can never steal a later voice.
+  !free_head || key_spill[key] ? (
+    key_spill[key] += 1; muted_total += 1;
+    last_input = note; last_output = -1; last_channel = ch;
+  ) : (
+    out = choose_pitch(ch, note);
+    // Cut the base immediately before the first successful relative Note On.
+    // Its later physical Note Off must not cut a new owner of the same pitch.
+    out >= 0 && cfg_mode == 1 && selected_channel(ch) && reference[ch] ?
+      stop_voice_output(reference[ch], offset, 0);
+    id = free_head; p = voices + (id - 1) * STRIDE; free_head = p[4];
+    p[0] = key; p[1] = out; p[2] = 1; p[3] = 0;
+    p[4] = 0; p[5] = live_tail; p[6] = 0; p[7] = 0;
+    live_tail ? voices[(live_tail - 1) * STRIDE + 4] = id : live_head = id;
+    live_tail = id;
+    tail = key_tail[key];
+    tail ? voices[(tail - 1) * STRIDE + 3] = id : key_head[key] = id;
+    key_tail[key] = id;
+    input_count[note] += 1; held_count += 1; voice_count += 1;
+    out >= 0 ? (
+      // One physical MIDI output key, potentially several owners. This avoids
+      // premature Note Offs and unmatched duplicate Note Ons in downstream synths.
+      !owners[ch * 128 + out] ? midisend(offset, $x90 | ch, out, velocity);
+      owners[ch * 128 + out] += 1;
+      p[7] = 1;
+      output_count[out] += 1; sounding_count += 1;
+      channel_seen[ch] = 1;
+      !reference[ch] ? reference[ch] = id;
+      relative_cursor[ch] = out; relative_last_input[ch] = note;
+    ) : muted_total += 1;
+    last_input = note; last_output = out; last_channel = ch;
+  );
+);
+
+function note_off(ch note velocity offset) local(key id p) (
+  key = ch * 128 + note; id = key_head[key];
+  id ? (
+    p = voices + (id - 1) * STRIDE;
+    key_head[key] = p[3]; !p[3] ? key_tail[key] = 0;
+    p[2] = 0; p[6] = velocity;
+    p[1] != -2 ? (input_count[note] -= 1; held_count -= 1;);
+    reference[ch] == id ? find_reference(ch);
+    !active_sustain || !pedal[ch] || !p[7] ? finish_voice(id, offset);
+  ) : key_spill[key] ? key_spill[key] -= 1;
+  // Unmatched Note Offs are swallowed: forwarding them could kill another
+  // input key currently mapped to this output pitch.
+);
+
+function poly_pressure(ch note value offset) local(id p out found) (
+  memset(pressure_seen, 0, 128); id = live_head; found = 0;
+  while(id) (
+    p = voices + (id - 1) * STRIDE;
+    p[0] == ch * 128 + note && p[7] ? (
+      out = p[1];
+      !pressure_seen[out] ? (
+        midisend(offset, $xA0 | ch, out, value); pressure_seen[out] = 1;
+      );
+      found = 1;
+    );
+    id = p[4];
+  );
+  !found && !selected_channel(ch) ? midisend(offset, $xA0 | ch, note, value);
+);
+
+function process_midi(offset status data1 data2) local(kind ch i) (
+  kind = status & $xF0; ch = status & 15;
+  kind == $x90 && data2 > 0 ? note_on(ch, data1, data2, offset) :
+  kind == $x80 || (kind == $x90 && data2 == 0) ? note_off(ch, data1, data2, offset) :
+  kind == $xA0 ? poly_pressure(ch, data1, data2, offset) :
+  kind == $xB0 && data1 == 64 ? (
+    pedal_value[ch] = data2;
+    active_sustain ? (
+      data2 >= 64 ? pedal[ch] = 1 : (
+        release_pedal(ch, offset); pedal_value[ch] = data2;
+      );
+      // CC64 is intentionally consumed ONLY while Capture is enabled.
+    ) : (
+      pedal[ch] = data2 >= 64; pedal_out[ch] = data2;
+      midisend(offset, status, data1, data2);
+    );
+  ) : (
+    kind == $xB0 ? (
+      data1 == 121 ? (release_pedal(ch, offset); pedal_out[ch] = 0;) :
+          (data1 == 120 || data1 >= 123) ? (
+            panic_channel(ch, offset); reset_input_channel(ch);
+          );
+    );
+    status == $xFF || status == $xFC ? panic_all(offset);
+    status == $xFF ? (i=0; loop(16,reset_input_channel(i);i+=1;););
+    midisend(offset, status, data1, data2);
+  );
+);
+
+function update_configuration() local(ch ref p) (
+  cfg_mode = min(2, max(0, floor(cfg_mode)));
+  cfg_tie = cfg_tie >= 0.5;
+  cfg_channel = min(16, max(0, floor(cfg_channel)));
+  cfg_mask = floor(cfg_mask) & 4095;
+  cfg_root = min(11, max(0, floor(cfg_root)));
+  cfg_preset = min(10, max(0, floor(cfg_preset)));
+  cfg_sustain = cfg_sustain >= 0.5;
+  cfg_relative_ref = cfg_relative_ref >= 0.5;
+  cfg_relative_ref != previous_relative_ref ? (
+    !cfg_relative_ref ? (
+      ch = 0;
+      loop(16,
+        ref = reference[ch]; p = voices + (ref - 1) * STRIDE;
+        relative_cursor[ch] = ref ? p[1] : -1;
+        relative_last_input[ch] = ref ? p[0] % 128 : -1;
+        ch += 1;
+      );
+    );
+    previous_relative_ref = cfg_relative_ref;
+  );
+  apply_sustain_mode();
+  (cfg_preset != previous_preset || cfg_root != previous_root) && cfg_preset > 0 ? (
+    cfg_mask = preset_mask(cfg_preset, cfg_root); sliderchange(1 << 3);
+  );
+  previous_preset = cfg_preset; previous_root = cfg_root;
+  cfg_mask != cached_mask || cfg_tie != cached_tie ? rebuild_selection();
+);
+
+!initialized ? (
+  memset(0, 0, 42020);
+  memset(relative_cursor, -1, 16);
+  memset(relative_last_input, -1, 16);
+  free_head = 1; i = 1;
+  loop(MAX_VOICES,
+    voices[(i - 1) * STRIDE + 4] = i < MAX_VOICES ? i + 1 : 0;
+    i += 1;
+  );
+  live_head = live_tail = voice_count = held_count = sounding_count = 0;
+  cached_mask = cached_tie = -1;
+  previous_preset = cfg_preset; previous_root = cfg_root;
+  previous_panic = cfg_panic;
+  previous_relative_ref = cfg_relative_ref;
+  active_sustain = cfg_sustain;
+  last_play_state = 0;
+  last_input = last_output = -1; last_channel = 0;
+  // White-key location or black-key boundary in a seven-white-key octave.
+  white_position[0]=0; white_position[1]=1; white_position[2]=1;
+  white_position[3]=2; white_position[4]=2; white_position[5]=3;
+  white_position[6]=4; white_position[7]=4; white_position[8]=5;
+  white_position[9]=5; white_position[10]=6; white_position[11]=6;
+  initialized = 1;
+) : reinit_panic = 1;
+
+@slider
+// State/mapping changes are applied at the next block boundary, without
+// touching the ownership of notes already sounding.
+
+@serialize
+// Sliders contain ALL persistent settings. Runtime voices are never serialized.
+// A non-empty section also preserves state if REAPER calls @init again.
+0;
+
+@block
+midi_bus = 0;
+update_configuration();
+cfg_panic != previous_panic || reinit_panic ||
+((last_play_state & 1) && !(play_state & 1)) ? (
+  panic_all(0); previous_panic = cfg_panic; reinit_panic = 0;
+);
+last_play_state = play_state;
+while(midirecv(offset, status, data1, data2)) (
+  midi_bus == 0 ? process_midi(offset, status, data1, data2) :
+                  midisend(offset, status, data1, data2);
+);
+
+@gfx 820 720
+// Only the audio thread mutates MIDI state. The UI reads counters and writes
+// slider parameters; it never sends MIDI or edits voice records.
+function ui_rect(x y w h r g b) (
+  gfx_set(r,g,b,1); gfx_rect(x*ui_scale,y*ui_scale,w*ui_scale,h*ui_scale);
+);
+
+function ui_text(x y w h text size r g b align) (
+  gfx_setfont(1,"Segoe UI",max(9,size*ui_scale));
+  gfx_set(r,g,b,1); gfx_x=x*ui_scale; gfx_y=y*ui_scale;
+  gfx_drawstr(text,align,(x+w)*ui_scale,(y+h)*ui_scale);
+);
+
+function hit(x y w h) (
+  mx >= x && mx < x+w && my >= y && my < y+h;
+);
+
+function button(x y w h text active) local(hover) (
+  hover = hit(x,y,w,h);
+  active ? ui_rect(x,y,w,h,0.20,0.65,0.54) :
+  hover ? ui_rect(x,y,w,h,0.22,0.25,0.30) : ui_rect(x,y,w,h,0.15,0.18,0.22);
+  active ? ui_text(x,y,w,h,text,14,0.04,0.09,0.09,5) :
+           ui_text(x,y,w,h,text,14,0.87,0.90,0.94,5);
+  clicked && hover;
+);
+
+function parameter(index value) (
+  slider(index) = value;
+  slider_automate(1 << (index - 1));
+);
+
+function note_menu(current) local(i result) (
+  strcpy(#note_menu,""); i=0;
+  loop(12,
+    i ? strcat(#note_menu,"|");
+    i==current ? strcat(#note_menu,"!");
+    strcat(#note_menu,pc_name(i)); i+=1;
+  );
+  gfx_x=mouse_x; gfx_y=mouse_y;
+  result=gfx_showmenu(#note_menu);
+  result ? result-1 : current;
+);
+
+function black_key(pc) (
+  pc==1 || pc==3 || pc==6 || pc==8 || pc==10;
+);
+
+function pc_activity(pc counts) local(n count) (
+  count=0; n=pc;
+  while(n<128) (count+=counts[n]; n+=12;);
+  count;
+);
+
+function piano_key(x y w h pc black view) local(active playing rin rout) (
+  active = cfg_mask & (1<<pc);
+  playing = view == 1 ? pc_activity(pc,input_count) :
+            view == 2 ? pc_activity(pc,output_count) : 0;
+  view == 0 ? (
+    active ? ui_rect(x,y,w,h,0.20,0.65,0.54) :
+    black ? ui_rect(x,y,w,h,0.07,0.09,0.12) : ui_rect(x,y,w,h,0.24,0.27,0.32);
+  ) : (
+    playing ? (view == 1 ? ui_rect(x,y,w,h,0.35,0.57,0.92) :
+                          ui_rect(x,y,w,h,0.20,0.65,0.54)) :
+    black ? ui_rect(x,y,w,h,0.06,0.08,0.11) : ui_rect(x,y,w,h,0.22,0.25,0.30);
+    active && !playing ? ui_rect(x+3,y+h-5,w-6,3,0.20,0.48,0.41);
+  );
+  ui_text(x,y+h-23,w,20,pc_name(pc),black?11:13,
+          (playing || (view==0 && active))?0.03:0.78,
+          (playing || (view==0 && active))?0.10:0.82,
+          (playing || (view==0 && active))?0.10:0.88,5);
+  ui_ref ? (
+    rin = ui_ref_in % 12; rout = ui_ref_out % 12;
+    ((view==1 && pc==rin) || (view==2 && pc==rout)) ?
+      ui_rect(x+3,y+4,w-6,4,0.98,0.76,0.33);
+  );
+);
+
+// Black keys are drawn AND hit-tested last, so their overlapping area wins.
+function piano(x y w h view) local(pc kw bx bw chosen) (
+  kw=w/7; bw=kw*0.62; pc=0; chosen=-1;
+  loop(12,
+    !black_key(pc) ? (
+      bx=x+white_position[pc]*kw;
+      piano_key(bx+1,y,kw-2,h,pc,0,view);
+      view==0 && hit(bx,y,kw,h) ? chosen=pc;
+    ); pc+=1;
+  );
+  pc=0;
+  loop(12,
+    black_key(pc) ? (
+      bx=x+white_position[pc]*kw-bw*0.5;
+      piano_key(bx,y,bw,h*0.60,pc,1,view);
+      view==0 && hit(bx,y,bw,h*0.60) ? chosen=pc;
+    ); pc+=1;
+  );
+  view==0 && clicked && chosen>=0 ? (
+    parameter(6,0); parameter(4,cfg_mask ~ (1<<chosen));
+  );
+);
+
+function format_note(note dest) (
+  note<0 ? strcpy(dest,"--") :
+  sprintf(dest,"%s%d  [%d]",pc_name(note%12),floor(note/12)-1,note);
+);
+
+function held_list(counts dest) local(n shown) (
+  strcpy(dest,""); n=0; shown=0;
+  loop(128,
+    counts[n]>0 ? (
+      shown<11 ? (
+        shown ? strcat(dest,"   ");
+        sprintf(#list_note,"%s%d",pc_name(n%12),floor(n/12)-1);
+        strcat(dest,#list_note);
+      ); shown+=1;
+    ); n+=1;
+  );
+  shown>11 ? strcat(dest,"  ...");
+  !shown ? strcpy(dest,"--");
+);
+
+ui_scale = min(gfx_w/820,gfx_h/720);
+ui_scale = max(0.1,ui_scale);
+mx=mouse_x/ui_scale; my=mouse_y/ui_scale;
+clicked=(mouse_cap&1) && !(previous_mouse_cap&1);
+gfx_clear=$x12171E;
+ui_rect(0,0,820,720,0.07,0.09,0.12);
+ui_text(24,16,600,31,"MIDI SMART QUANTIZER",24,0.91,0.94,0.98,0);
+ui_text(25,49,650,23,"Live pitch shaping  /  stable voices  /  zero added latency",13,0.50,0.57,0.65,0);
+button(690,23,106,34,"PANIC",0) ? parameter(7,1-cfg_panic);
+
+button(24,87,184,40,"Quantize",cfg_mode==0) ? parameter(1,0);
+button(212,87,184,40,"Relative",cfg_mode==1) ? parameter(1,1);
+button(400,87,184,40,"Mapping",cfg_mode==2) ? parameter(1,2);
+button(610,87,89,40,"Tie: Down",!cfg_tie) ? parameter(2,0);
+button(703,87,93,40,"Tie: Up",cfg_tie) ? parameter(2,1);
+
+sprintf(#channel_label,"Channel: %s",cfg_channel ? sprintf(#channel_number,"%d",cfg_channel) : "All");
+button(24,140,138,32,#channel_label,0) ? (
+  strcpy(#channel_menu,cfg_channel==0?"!All":"All"); i=1;
+  loop(16,
+    sprintf(#menu_entry,"|%s%d",cfg_channel==i?"!":"",i);
+    strcat(#channel_menu,#menu_entry); i+=1;
+  );
+  gfx_x=mouse_x; gfx_y=mouse_y; menu_result=gfx_showmenu(#channel_menu);
+  menu_result ? parameter(3,menu_result-1);
+);
+sprintf(#root_label,"Root: %s",pc_name(cfg_root));
+button(170,140,104,32,#root_label,0) ? parameter(5,note_menu(cfg_root));
+sprintf(#preset_label,"Scale: %s",preset_name(cfg_preset));
+button(282,140,290,32,#preset_label,0) ? (
+  strcpy(#preset_menu,""); i=0;
+  loop(11,
+    i ? strcat(#preset_menu,"|");
+    i==cfg_preset ? strcat(#preset_menu,"!");
+    strcat(#preset_menu,preset_name(i)); i+=1;
+  );
+  gfx_x=mouse_x; gfx_y=mouse_y; menu_result=gfx_showmenu(#preset_menu);
+  menu_result ? (
+    parameter(6,menu_result-1);
+    menu_result>1 ? parameter(4,preset_mask(menu_result-1,cfg_root));
+  );
+);
+button(580,140,216,32,"Reset: chromatic",0) ? (
+  parameter(6,1); parameter(4,4095);
+);
+
+cfg_mode==2 ? (
+  ui_text(24,185,772,23,"PITCH-CLASS MAPPING  /  click an output note to change it",13,0.58,0.65,0.73,0);
+  i=0;
+  loop(12,
+    x=24+i*65;
+    ui_text(x,217,57,24,pc_name(i),14,0.61,0.68,0.76,5);
+    button(x,249,57,53,pc_name(slider(8+i)),0) ? parameter(8+i,note_menu(slider(8+i)));
+    i+=1;
+  );
+  ui_text(24,311,580,23,"Mapping uses the same octave and ignores the scale selection.",12,0.50,0.57,0.65,0);
+  button(626,309,170,28,"Identity mapping",0) ? (
+    i=0; loop(12, parameter(8+i,i); i+=1;);
+  );
+) : (
+  ui_text(24,185,772,23,"ALLOWED NOTES  /  click piano keys to edit freely",13,0.58,0.65,0.73,0);
+  piano(24,216,772,106,0);
+);
+
+cfg_mode==1 ? (
+  button(24,327,196,22,"Reference: Base",!cfg_relative_ref) ? parameter(21,0);
+  button(224,327,218,22,"Reference: Last note",cfg_relative_ref) ? parameter(21,1);
+);
+
+// Show the actual input reference, including a released last-note reference.
+ui_ref_channel=last_channel;
+ui_ref=cfg_mode==1 ? (cfg_relative_ref ? relative_last_input[ui_ref_channel]>=0 : reference[ui_ref_channel]>0) : 0;
+!ui_ref && cfg_mode==1 ? (
+  i=0;
+  loop(16,
+    !ui_ref && (cfg_relative_ref ? relative_last_input[i]>=0 : reference[i]>0) ? (
+      ui_ref=1; ui_ref_channel=i;
+    );
+    i+=1;
+  );
+);
+ui_rect(24,350,772,46,0.10,0.13,0.17);
+ui_ref ? (
+  cfg_relative_ref ? (
+    ui_ref_in=relative_last_input[ui_ref_channel]; ui_ref_out=relative_cursor[ui_ref_channel];
+  ) : (
+    p=voices+(reference[ui_ref_channel]-1)*STRIDE;
+    ui_ref_in=p[0]%128; ui_ref_out=p[1];
+  );
+  format_note(ui_ref_in,#ref_in); format_note(ui_ref_out,#ref_out);
+  format_note(relative_cursor[ui_ref_channel],#cursor_note);
+  sprintf(#ref_label,"%s / Ch %d   %s > %s   |   CURSOR %s",cfg_relative_ref?"LAST NOTE":"BASE",ui_ref_channel+1,#ref_in,#ref_out,#cursor_note);
+  ui_text(36,350,748,46,#ref_label,13,0.98,0.76,0.33,4);
+) : ui_text(36,350,748,46,cfg_mode==1?"REFERENCE  /  play a note to anchor the next intervals":"Independent pitch processing",14,0.58,0.65,0.73,4);
+
+ui_text(24,410,100,23,"INPUT",13,0.42,0.65,1.00,0);
+held_list(input_count,#input_notes);
+ui_text(125,408,671,26,#input_notes,13,0.68,0.75,0.84,2);
+piano(24,440,772,65,1);
+ui_text(24,518,100,23,"OUTPUT",13,0.25,0.76,0.63,0);
+held_list(output_count,#output_notes);
+ui_text(125,516,671,26,#output_notes,13,0.68,0.75,0.84,2);
+piano(24,548,772,65,2);
+
+format_note(last_input,#last_in); format_note(last_output,#last_out);
+sprintf(#last_label,"LAST  /  Ch %d    %s  >  %s",last_channel+1,#last_in,#last_out);
+ui_text(24,628,530,25,#last_label,13,0.66,0.73,0.81,0);
+sustain_channels=0; i=0; loop(16,sustain_channels+=pedal[i]>0;i+=1;);
+sprintf(#counts_label,"%d held   /   %d voices   /   sustain %d",held_count,sounding_count,sustain_channels);
+ui_text(24,657,560,24,#counts_label,12,0.50,0.58,0.66,0);
+button(600,650,196,31,cfg_sustain?"Sustain: Capture":"Sustain: Thru",cfg_sustain) ?
+  parameter(20,1-cfg_sustain);
+cfg_mask==0 && cfg_mode!=2 ? (
+  ui_text(24,686,772,22,"No allowed notes: new notes are muted. Select at least one piano key.",12,0.98,0.67,0.35,0);
+) : muted_total>0 ? (
+  sprintf(#muted_label,"%d note(s) muted: no legal free pitch, empty selection, or voice capacity.",muted_total);
+  ui_text(24,686,772,22,#muted_label,12,0.98,0.67,0.35,0);
+) : ui_text(24,686,772,22,cfg_relative_ref?
+    "Relative / Last note: remembers the last input/output after release. Panic starts a new phrase.":
+    "Relative / Base: first relative note stops the base sound; its held key remains the reference.",12,0.45,0.53,0.61,0);
+previous_mouse_cap=mouse_cap;

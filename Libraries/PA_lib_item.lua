@@ -130,7 +130,7 @@ function PA_IsMidiItemPooled(item)
 end
 
 -- Collecte les autres items du même pool MIDI que ref_item (ref_item exclu).
--- Retourne une liste de tables { track, pos, len, startoffs }.
+-- Retourne une liste de tables { item, track, pos, len, startoffs }.
 local function CollectPoolSiblings(ref_item)
   local ref_guid = GetMidiPoolGUID(ref_item)
   local siblings = {}
@@ -142,6 +142,7 @@ local function CollectPoolSiblings(ref_item)
       if cand ~= ref_item and GetMidiPoolGUID(cand) == ref_guid then
         local ctake = reaper.GetActiveTake(cand)
         siblings[#siblings + 1] = {
+          item     = cand,
           track    = track,
           pos      = reaper.GetMediaItemInfo_Value(cand, "D_POSITION"),
           len      = reaper.GetMediaItemInfo_Value(cand, "D_LENGTH"),
@@ -259,15 +260,9 @@ function PA_ExtendPooledMidiItemLeft(item, new_pos, take, item_start, item_len)
   end
 
   -- 2) Reconstruire chaque sibling par duplication de l'item glué.
+  local replacements = { [item] = glued }
   for _, sib in ipairs(siblings) do
-    -- Supprimer l'ancien sibling (on le retrouve par position sur sa piste).
-    for i = reaper.CountTrackMediaItems(sib.track) - 1, 0, -1 do
-      local it = reaper.GetTrackMediaItem(sib.track, i)
-      if math.abs(reaper.GetMediaItemInfo_Value(it, "D_POSITION") - sib.pos) < 1e-6 then
-        reaper.DeleteTrackMediaItem(sib.track, it)
-        break
-      end
-    end
+    reaper.DeleteTrackMediaItem(sib.track, sib.item)
     -- Aligner par l'ORIGINE DU POOL (pas par le début d'item), pour gérer les siblings déjà
     -- trimés à l'intérieur (startoffs non nul). Dans glued, le contenu pool d'offset "so"
     -- depuis l'origine est à la position projet (pool_origin + so). Le sibling l'affichait à
@@ -277,6 +272,7 @@ function PA_ExtendPooledMidiItemLeft(item, new_pos, take, item_start, item_len)
     local dup_pos = new_pos + d
     local dup = DuplicatePooledItem(glued, sib.track, dup_pos)
     TrimMidiItemTo(dup, sib.pos, sib.len)
+    replacements[sib.item] = dup
   end
 
   -- Ne laisser sélectionné que l'item qu'on vient d'étendre.
@@ -285,7 +281,29 @@ function PA_ExtendPooledMidiItemLeft(item, new_pos, take, item_start, item_len)
 
   reaper.PreventUIRefresh(-1)
   reaper.UpdateArrange()
-  return glued
+  return glued, replacements
+end
+
+-- Trim groupé : une extension MIDI poolée peut remplacer les autres cibles.
+-- Actualiser leurs pointeurs avant de continuer et conserver chaque fade d'origine.
+function PA_TrimItemsLeft(items, new_pos)
+  local fades = {}
+  for i, item in ipairs(items) do
+    fades[i] = reaper.GetMediaItemInfo_Value(item, "D_FADEINLEN")
+  end
+  for i, item in ipairs(items) do
+    local ending = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+    if new_pos < ending then
+      local result, replacements = PA_TrimItemLeft(item, new_pos)
+      if result then reaper.SetMediaItemInfo_Value(result, "D_FADEINLEN", fades[i]) end
+      if replacements then
+        for j = i + 1, #items do
+          items[j] = replacements[items[j]] or items[j]
+        end
+      end
+    end
+  end
 end
 
 -- Trim le bord gauche d'un item à new_pos (modifie position, longueur et start offset).
@@ -333,11 +351,12 @@ function PA_TrimItemLeft(item, new_pos)
   if take then
     -- Pour un item audio, on veut révéler/cacher du contenu source, pas le faire glisser.
     -- En extension (delta > 0), on ne peut révéler du contenu que dans la limite de ce qui
-    -- existe avant le début actuel : le start offset ne peut pas descendre sous 0.
+    -- existe avant le début actuel. En raccourcissement, conserver un éventuel offset
+    -- négatif (silence avant la source) pour atteindre exactement le bord demandé.
     local playrate   = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
     local start_offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
     local new_offs   = start_offs - delta * playrate
-    if new_offs < 0 then
+    if delta > 0 and new_offs < 0 then
       -- Pas assez de contenu source à gauche : on borne l'extension au contenu disponible.
       new_pos = new_pos + (-new_offs) / playrate
       new_offs = 0

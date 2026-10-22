@@ -38,6 +38,16 @@ local function main()
 
   local split_time = snap_enabled and reaper.SnapToGrid(0, mouse_time) or mouse_time
 
+  local track_targets = PA_GetMouseEditTargets(mouse_time, "left")
+  if track_targets then
+    if #track_targets == 0 then return end
+    reaper.Undo_BeginBlock()
+    PA_TrimItemsLeft(track_targets, split_time)
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Trim left of visible items on selected tracks", -1)
+    return
+  end
+
   local num_selected = reaper.CountSelectedMediaItems(0)
 
   reaper.Undo_BeginBlock()

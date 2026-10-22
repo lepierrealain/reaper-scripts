@@ -94,3 +94,81 @@ function PA_GetItemUnderMouse()
   end
   return nil, nil
 end
+
+-- Mode commun aux éditions sous la souris. L'action toggle gère sa durée de vie.
+function PA_IsSelectedTrackMouseEditingEnabled()
+  return reaper.GetExtState("PA_MouseEditing", "selected_tracks") == "1"
+end
+
+-- nil : mode désactivé, garder le comportement habituel de l'action.
+-- Sinon : un item par piste (piste survolée + pistes sélectionnées), sans doublons.
+-- edge="left" cherche le voisin de droite dans un trou, "right" celui de gauche.
+-- Sans edge, seuls les items traversés par le temps souris sont retenus.
+-- neighbors_only sert à la copie : ignorer les items traversés par la souris.
+function PA_GetMouseEditTargets(time, edge, neighbors_only)
+  if not PA_IsSelectedTrackMouseEditingEnabled() then return nil end
+
+  local targets = {}
+  local hovered_track = PA_GetMouseArrangeContext()
+  if not hovered_track then return targets end
+
+  -- Sans géométrie de l'arrangeur, ne pas risquer d'éditer des pistes hors écran.
+  if not reaper.JS_Window_FindChildByID or not reaper.JS_Window_GetClientRect then
+    return targets
+  end
+  local arrange = reaper.JS_Window_FindChildByID(reaper.GetMainHwnd(), 1000)
+  if not arrange then return targets end
+  local ok, _, top, _, bottom = reaper.JS_Window_GetClientRect(arrange)
+  if not ok or bottom <= top then return targets end
+
+  local view_start, view_end = reaper.GetSet_ArrangeView2(0, false, 0, 0)
+  if time < view_start or time >= view_end then return targets end
+  local _, mouse_y = reaper.GetMousePosition()
+  local hovered_y = reaper.GetMediaTrackInfo_Value(hovered_track, "I_TCPY")
+  local hovered_h = reaper.GetMediaTrackInfo_Value(hovered_track, "I_TCPH")
+  local height_ratio = math.max(0, math.min(0.999999,
+    (mouse_y - top - hovered_y) / math.max(1, hovered_h)))
+
+  local tracks, seen = { hovered_track }, { [hovered_track] = true }
+  for i = 0, reaper.CountSelectedTracks(0) - 1 do
+    local track = reaper.GetSelectedTrack(0, i)
+    if not seen[track] then
+      seen[track] = true
+      tracks[#tracks + 1] = track
+    end
+  end
+
+  for _, track in ipairs(tracks) do
+    local track_y = reaper.GetMediaTrackInfo_Value(track, "I_TCPY")
+    local track_h = reaper.GetMediaTrackInfo_Value(track, "I_TCPH")
+    if reaper.IsTrackVisible(track, false) and track_h > 0
+      and track_y < bottom - top and track_y + track_h > 0 then
+      local free_mode = reaper.GetMediaTrackInfo_Value(track, "I_FREEMODE") ~= 0
+      local target_y = height_ratio * track_h
+      local hit, neighbor, distance = nil, nil, math.huge
+      for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+        local item = reaper.GetTrackMediaItem(track, i)
+        local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+        local ending = pos + reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+        local item_y = reaper.GetMediaItemInfo_Value(item, "I_LASTY")
+        local item_h = reaper.GetMediaItemInfo_Value(item, "I_LASTH")
+        if pos < view_end and ending > view_start and item_h > 0
+          and track_y + item_y < bottom - top and track_y + item_y + item_h > 0
+          and reaper.GetMediaItemInfo_Value(item, "B_FIXEDLANE_HIDDEN") == 0
+          and (math.floor(reaper.GetMediaItemInfo_Value(item, "C_LOCK")) & 1) == 0
+          and (not free_mode or (target_y >= item_y and target_y < item_y + item_h)) then
+          if not neighbors_only and pos <= time and ending > time then
+            hit = hit or item
+          elseif edge == "left" and pos >= time and pos - time < distance then
+            neighbor, distance = item, pos - time
+          elseif edge == "right" and ending <= time and time - ending < distance then
+            neighbor, distance = item, time - ending
+          end
+        end
+      end
+      local item = hit or neighbor
+      if item then targets[#targets + 1] = item end
+    end
+  end
+  return targets
+end

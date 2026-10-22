@@ -34,6 +34,23 @@ local function SplitSelectionAtEditCursor()
 end
 
 local function main()
+  local _, arrange_time = PA_GetMouseArrangeContext()
+  if arrange_time then
+    local track_targets = PA_GetMouseEditTargets(arrange_time)
+    if track_targets then
+      if #track_targets == 0 then return end
+      local split_time = snap(arrange_time)
+      reaper.Undo_BeginBlock()
+      reaper.SelectAllMediaItems(0, false)
+      for _, item in ipairs(track_targets) do
+        reaper.SplitMediaItem(item, split_time)
+      end
+      reaper.UpdateArrange()
+      reaper.Undo_EndBlock("Split visible items on selected tracks at mouse cursor", -1)
+      return
+    end
+  end
+
   local item, mouse_time = PA_GetItemUnderMouse()
   if not item then
     SplitSelectionAtEditCursor()
